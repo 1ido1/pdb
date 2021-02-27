@@ -10,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <tbb/concurrent_unordered_map.h>
 
 class Utils {
 public:
@@ -21,7 +22,7 @@ public:
         os << std::endl;
     }
     template<class T1,class T2>
-    static void printMap(std::ostream &os, std::map<T1,std::shared_ptr<T2>>& map) {
+    static void printMap(std::ostream &os, tbb::concurrent_unordered_map<T1,std::shared_ptr<T2>>& map) {
         for(auto elem : map)
         {
             os << "[" << elem.first << " " << *elem.second << "]" << ", ";

@@ -4,7 +4,7 @@
 
 #include "log_writer.h"
 
-LogWriter::LogWriter(std::vector<std::shared_ptr<Transaction>> &logTransactions)
+LogWriter::LogWriter(tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions)
 : logTransactions(logTransactions) {}
 
 void LogWriter::writeLog(std::vector<std::shared_ptr<Transaction>> transactions) {

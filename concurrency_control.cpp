@@ -6,10 +6,12 @@
 #include <memory>
 #include "concurrency_control.h"
 
-ConcurrencyControl::ConcurrencyControl(std::map<int, std::shared_ptr<Record>> &recordsMap,
-                                       const std::vector<std::shared_ptr<Transaction>> &logTransactions)
+ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+                                       const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                                       int threadNumber)
         : recordsMap(recordsMap),
-          logTransactions(logTransactions) {}
+          logTransactions(logTransactions),
+          threadNumber(threadNumber) {}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
     if (recordsMap.count(operation.key)) {
@@ -27,6 +29,10 @@ void ConcurrencyControl::writeOperation(Operation operation, const Transaction &
 
 void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
     for (Operation operation : transaction.operations) {
+        if (!isKeyInThePartition(operation.key)) {
+            continue;
+        }
+
         if (operation.inputType == InputTypes::insert || operation.inputType == InputTypes::modify ||
             operation.inputType == InputTypes::update) {
             writeOperation(operation, transaction);
@@ -42,4 +48,8 @@ void ConcurrencyControl::readFromLog() {
 
         //TODO: wait for all other to finish
     }
+}
+
+bool ConcurrencyControl::isKeyInThePartition(int key) {
+    return key % Constants::CC_THREADS_NUMBER == threadNumber;
 }

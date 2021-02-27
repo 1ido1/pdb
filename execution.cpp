@@ -6,9 +6,9 @@
 #include "constants.h"
 #include "state.h"
 
-Execution::Execution(std::map<int, std::shared_ptr<Record>> &recordsMap,
-                     const std::vector<std::shared_ptr<Transaction>> &logTransactions,
-                     std::map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber)
+Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+                     const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                     tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           timestampToTransactionState(timestampToTransactionState),

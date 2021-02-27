@@ -7,18 +7,24 @@
 
 
 #include <map>
+#include <tbb/concurrent_vector.h>
+#include <tbb/concurrent_unordered_map.h>
 #include "record.h"
 #include "constants.h"
 
 class ConcurrencyControl {
 private:
-    std::map<int,std::shared_ptr<Record>>& recordsMap;
-    const std::vector<std::shared_ptr<Transaction>>& logTransactions;
+    tbb::concurrent_unordered_map<int,std::shared_ptr<Record>>& recordsMap;
+    const tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;
     int logPosition = 0;
+    int threadNumber;
+
+    bool isKeyInThePartition(int key);
 
 public:
-    ConcurrencyControl(std::map<int, std::shared_ptr<Record>> &recordsMap,
-                       const std::vector<std::shared_ptr<Transaction>> &logTransactions);
+    ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+                       const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                       int threadNumber);
     void writeOperation(Operation operation, const Transaction &transaction);
     void writeTransaction(const Transaction &transaction);
     void readFromLog();

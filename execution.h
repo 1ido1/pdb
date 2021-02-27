@@ -10,22 +10,24 @@
 #include <memory>
 #include <set>
 #include <queue>
+#include <tbb/concurrent_vector.h>
+#include <tbb/concurrent_unordered_map.h>
 #include "record.h"
 #include "state.h"
 
 class Execution {
 private:
-    std::map<int, std::shared_ptr<Record>> &recordsMap;
-    const std::vector<std::shared_ptr<Transaction>> &logTransactions;
-    std::map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState;
+    tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap;
+    const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions;
+    tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState;
     int threadNumber;
     int batchPosition = 0;
     std::queue<int> transactionsToExecute;
 
 public:
-    Execution(std::map<int, std::shared_ptr<Record>> &recordsMap,
-              const std::vector<std::shared_ptr<Transaction>> &logTransactions,
-              std::map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber);
+    Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+              const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+              tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber);
 
     void readFromLog();
 
