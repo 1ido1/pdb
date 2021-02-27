@@ -16,10 +16,11 @@ void ConcurrencyControl::writeOperation(Operation operation, const Transaction &
         auto prevRecord = recordsMap.at(operation.key);
         prevRecord->endTimestamp = transaction.timestamp;
         auto newRecord =
-                std::make_shared<Record>(transaction.timestamp, LONG_MAX, transaction, INITIALIZED_VALUE, prevRecord);
+                std::make_shared<Record>(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE,
+                                         prevRecord);
         recordsMap.emplace(operation.key, newRecord);
     } else {
-        Record record(transaction.timestamp, LONG_MAX, transaction, INITIALIZED_VALUE, nullptr);
+        Record record(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE, nullptr);
         recordsMap.emplace(operation.key, std::make_shared<Record>(record));
     }
 }

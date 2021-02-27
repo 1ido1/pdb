@@ -12,7 +12,6 @@
 
 class ConcurrencyControl {
 private:
-    constexpr static double INITIALIZED_VALUE = -9999;
     std::map<int,std::shared_ptr<Record>>& recordsMap;
     const std::vector<std::shared_ptr<Transaction>>& logTransactions;
     int logPosition = 0;

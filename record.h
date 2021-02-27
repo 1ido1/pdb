@@ -23,8 +23,9 @@ public:
               prev(prev) {}
 
     friend std::ostream &operator<<(std::ostream &os, const Record &record) {
-        os << "beginTimestamp: " << record.beginTimestamp << " endTimestamp: " << record.endTimestamp
-           << " transaction: " << record.transaction << " value: " << record.value << " prev: " << record.prev;
+        os << "(beginTimestamp: " << record.beginTimestamp << ", endTimestamp: " << record.endTimestamp
+           << ", transaction timestamp: " << record.transaction.timestamp << ", value: " << record.value << ", prev: "
+           << record.prev << ")";
         return os;
     }
 };
