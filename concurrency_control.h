@@ -9,6 +9,7 @@
 #include <map>
 #include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <boost/thread/latch.hpp>
 #include "record.h"
 #include "constants.h"
 
@@ -16,14 +17,16 @@ class ConcurrencyControl {
 private:
     tbb::concurrent_unordered_map<int,std::shared_ptr<Record>>& recordsMap;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;
+    std::vector<std::shared_ptr<boost::latch>> &latches;
     int logPosition = 0;
     int threadNumber;
 
-    bool isKeyInThePartition(int key);
+    bool isKeyInThePartition(int key) const;
 
 public:
     ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                       std::vector<std::shared_ptr<boost::latch>> &latches,
                        int threadNumber);
     void writeOperation(Operation operation, const Transaction &transaction);
     void writeTransaction(const Transaction &transaction);

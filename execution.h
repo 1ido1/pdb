@@ -12,6 +12,7 @@
 #include <queue>
 #include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <boost/thread/latch.hpp>
 #include "record.h"
 #include "state.h"
 
@@ -20,6 +21,7 @@ private:
     tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions;
     tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState;
+    std::vector<std::shared_ptr<boost::latch>> &latches;
     int threadNumber;
     int batchPosition = 0;
     std::queue<int> transactionsToExecute;
@@ -27,11 +29,13 @@ private:
 public:
     Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
               const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-              tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber);
+              tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+              std::vector<std::shared_ptr<boost::latch>> &latches,
+              int threadNumber);
 
     void readFromLog();
 
-    bool executeTransaction(int timestamp);
+    bool executeTransaction(long timestamp);
 
     bool executeReadOperation(Operation operation, long timestamp);
 

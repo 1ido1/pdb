@@ -8,9 +8,11 @@
 
 ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                                        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                                       std::vector<std::shared_ptr<boost::latch>> &latches,
                                        int threadNumber)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
+          latches(latches),
           threadNumber(threadNumber) {}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
@@ -29,6 +31,7 @@ void ConcurrencyControl::writeOperation(Operation operation, const Transaction &
 
 void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
     for (Operation operation : transaction.operations) {
+//        std::cout << "cc thread " << threadNumber << " operation.key " << operation.key << " isKeyInThePartition " << isKeyInThePartition(operation.key) << std::endl;
         if (!isKeyInThePartition(operation.key)) {
             continue;
         }
@@ -46,10 +49,13 @@ void ConcurrencyControl::readFromLog() {
             writeTransaction(*logTransactions.at(logPosition++));
         }
 
-        //TODO: wait for all other to finish
+        int batchNumber = logPosition / Constants::BATCH_SIZE - 1;
+        std::cout << "batchNumber in cc " << batchNumber << std::endl;
+        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
+        latch->count_down_and_wait();
     }
 }
 
-bool ConcurrencyControl::isKeyInThePartition(int key) {
-    return key % Constants::CC_THREADS_NUMBER == threadNumber;
+bool ConcurrencyControl::isKeyInThePartition(int key) const {
+    return std::hash<int>{}(key) % Constants::CC_THREADS_NUMBER == threadNumber;
 }

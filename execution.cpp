@@ -8,19 +8,29 @@
 
 Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                      const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                     tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState, int threadNumber)
+                     tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+                     std::vector<std::shared_ptr<boost::latch>> &latches,
+                     int threadNumber)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           timestampToTransactionState(timestampToTransactionState),
+          latches(latches),
           threadNumber(threadNumber) {}
 
 void Execution::readFromLog() {
     while (batchPosition + Constants::BATCH_SIZE <= logTransactions.size()) {
+        int batchNumber = batchPosition / Constants::BATCH_SIZE;
+        std::cout << "batchNumber in et " << batchNumber << std::endl;
+
+        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
+        latch->wait();
+
         for (int i = threadNumber + batchPosition;
-             i < Constants::BATCH_SIZE; i += Constants::EXECUTION_THREADS_NUMBER) {
+             i < batchPosition + Constants::BATCH_SIZE; i += Constants::EXECUTION_THREADS_NUMBER) {
             transactionsToExecute.push(i);
+            std::cout << "thread number " << threadNumber << " transaction to execute " << i << std::endl;
         }
-        batchPosition += Constants::EXECUTION_THREADS_NUMBER;
+        batchPosition += Constants::BATCH_SIZE;
         while (!transactionsToExecute.empty()) {
             int timestamp = transactionsToExecute.front();
             transactionsToExecute.pop();
@@ -31,7 +41,7 @@ void Execution::readFromLog() {
     }
 }
 
-bool Execution::executeTransaction(int timestamp) {
+bool Execution::executeTransaction(long timestamp) {
     //TODO: lock transaction
     std::shared_ptr<TransactionState> &state = timestampToTransactionState[timestamp];
     auto currentState = &state;
