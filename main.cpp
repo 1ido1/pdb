@@ -1,3 +1,4 @@
+#ifndef TESTING
 
 #include <iostream>
 #include <vector>
@@ -57,13 +58,14 @@ int main() {
         ccThreads[i] = std::thread(&ConcurrencyControl::readFromLog, cc);
     }
 
-    for (auto &th : ccThreads) {
-        th.join();
-    }
     for (int i = 0; i < Constants::EXECUTION_THREADS_NUMBER; i++) {
         std::cout << "main() : creating execution thread, " << i << std::endl;
         Execution execution{recordsMap, logTransactions, idToTransactionState, latches, i};
         eThreads[i] = std::thread(&Execution::readFromLog, execution);
+    }
+
+    for (auto &th : ccThreads) {
+        th.join();
     }
 
     for (auto &th : eThreads) {
@@ -72,6 +74,8 @@ int main() {
 
     std::cout << "result ";
     Utils::printMap<>(std::cout, recordsMap);
-    
+
     return 0;
 }
+
+#endif

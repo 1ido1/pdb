@@ -42,7 +42,7 @@ void Execution::readFromLog() {
 }
 
 bool Execution::executeTransaction(long timestamp) {
-    //TODO: lock transaction
+    //TODO: check this lock transaction
     std::shared_ptr<TransactionState> &state = timestampToTransactionState[timestamp];
     auto currentState = &state;
     if (**currentState != TransactionState::unprocessed) {
@@ -68,6 +68,7 @@ bool Execution::executeTransaction(long timestamp) {
             case InputTypes::insert:
                 success = executeInsertOperation(operation);
                 break;
+            //TODO: implement modify and scan
             case InputTypes::modify:
                 break;
             case InputTypes::scan:
