@@ -7,8 +7,8 @@
 LogWriter::LogWriter(tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions)
 : logTransactions(logTransactions) {}
 
-void LogWriter::writeLog(std::vector<std::shared_ptr<Transaction>> transactions) {
-    for (auto transaction : transactions) {
+void LogWriter::writeLog(const std::vector<std::shared_ptr<Transaction>>& transactions) {
+    for (const auto& transaction : transactions) {
         logTransactions.push_back(transaction);
     }
 }

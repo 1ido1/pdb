@@ -20,18 +20,22 @@ class Execution {
 private:
     tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions;
-    tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState;
+    tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState;
     std::vector<std::shared_ptr<boost::latch>> &latches;
     int threadNumber;
+    int totalEThreads;
+    int batchSize;
     int batchPosition = 0;
     std::queue<int> transactionsToExecute;
 
 public:
     Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
               const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-              tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+              tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
               std::vector<std::shared_ptr<boost::latch>> &latches,
-              int threadNumber);
+              int threadNumber,
+              int totalEThreads,
+              int batchSize);
 
     void readFromLog();
 

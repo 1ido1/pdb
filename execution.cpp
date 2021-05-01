@@ -2,35 +2,40 @@
 // Created by bayda on 13/02/2021.
 //
 
+#include <iostream>
 #include "execution.h"
 #include "constants.h"
 #include "state.h"
 
 Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                      const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                     tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+                     tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
                      std::vector<std::shared_ptr<boost::latch>> &latches,
-                     int threadNumber)
+                     int threadNumber,
+                     int totalEThreads,
+                     int batchSize)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           timestampToTransactionState(timestampToTransactionState),
           latches(latches),
-          threadNumber(threadNumber) {}
+          threadNumber(threadNumber),
+          totalEThreads(totalEThreads),
+          batchSize(batchSize) {}
 
 void Execution::readFromLog() {
-    while (batchPosition + Constants::BATCH_SIZE <= logTransactions.size()) {
-        int batchNumber = batchPosition / Constants::BATCH_SIZE;
+    while (batchPosition + batchSize <= logTransactions.size()) {
+        int batchNumber = batchPosition / batchSize;
         std::cout << "batchNumber in et " << batchNumber << std::endl;
 
         std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
         latch->wait();
 
         for (int i = threadNumber + batchPosition;
-             i < batchPosition + Constants::BATCH_SIZE; i += Constants::EXECUTION_THREADS_NUMBER) {
+             i < batchPosition + batchSize; i += totalEThreads) {
             transactionsToExecute.push(i);
             std::cout << "thread number " << threadNumber << " transaction to execute " << i << std::endl;
         }
-        batchPosition += Constants::BATCH_SIZE;
+        batchPosition += batchSize;
         while (!transactionsToExecute.empty()) {
             int timestamp = transactionsToExecute.front();
             transactionsToExecute.pop();

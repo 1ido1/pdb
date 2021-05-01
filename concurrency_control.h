@@ -20,6 +20,8 @@ private:
     std::vector<std::shared_ptr<boost::latch>> &latches;
     int logPosition = 0;
     int threadNumber;
+    int totalCCThreads;
+    int batchSize;
 
     bool isKeyInThePartition(int key) const;
 
@@ -27,7 +29,9 @@ public:
     ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                        std::vector<std::shared_ptr<boost::latch>> &latches,
-                       int threadNumber);
+                       int threadNumber,
+                       int totalCCThreads,
+                       int batchSize);
     void writeOperation(Operation operation, const Transaction &transaction);
     void writeTransaction(const Transaction &transaction);
     void readFromLog();

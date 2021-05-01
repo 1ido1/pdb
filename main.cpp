@@ -42,7 +42,7 @@ int main() {
         latches[i] = std::make_shared<boost::latch>(ccThreadsNumber);
     }
 
-    tbb::concurrent_unordered_map<int, std::shared_ptr<TransactionState>> idToTransactionState;
+    tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> idToTransactionState;
     for (int i = 0; i < transactions.size(); ++i) {
         idToTransactionState[i] = std::make_shared<TransactionState>(TransactionState::unprocessed);
     }

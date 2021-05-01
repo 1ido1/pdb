@@ -14,7 +14,7 @@
      tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;
  public:
      explicit LogWriter(tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions);
-     void writeLog(std::vector<std::shared_ptr<Transaction>> transactions);
+     void writeLog(const std::vector<std::shared_ptr<Transaction>>& transactions);
  };
 
 

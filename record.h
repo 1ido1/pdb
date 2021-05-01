@@ -28,6 +28,18 @@ public:
            << record.prev << ")";
         return os;
     }
+
+    bool operator==(const Record &rhs) const {
+        return beginTimestamp == rhs.beginTimestamp &&
+               endTimestamp == rhs.endTimestamp &&
+               transaction == rhs.transaction &&
+               value == rhs.value &&
+               prev == rhs.prev;
+    }
+
+    bool operator!=(const Record &rhs) const {
+        return !(rhs == *this);
+    }
 };
 
 

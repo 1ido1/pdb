@@ -4,16 +4,21 @@
 
 #include <climits>
 #include <memory>
+#include <iostream>
 #include "concurrency_control.h"
 
 ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                                        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                                        std::vector<std::shared_ptr<boost::latch>> &latches,
-                                       int threadNumber)
+                                       int threadNumber,
+                                       int totalCCThreads,
+                                       int batchSize)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           latches(latches),
-          threadNumber(threadNumber) {}
+          threadNumber(threadNumber),
+          totalCCThreads(totalCCThreads),
+          batchSize(batchSize){}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
     if (recordsMap.count(operation.key)) {
@@ -44,18 +49,17 @@ void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
 }
 
 void ConcurrencyControl::readFromLog() {
-    while (logPosition + Constants::BATCH_SIZE <= logTransactions.size()) {
-        for (int i = 0; i < Constants::BATCH_SIZE; ++i) {
+    while (logPosition + batchSize <= logTransactions.size()) {
+        for (int i = 0; i < batchSize; ++i) {
             writeTransaction(*logTransactions.at(logPosition++));
         }
 
-        int batchNumber = logPosition / Constants::BATCH_SIZE - 1;
-        std::cout << "batchNumber in cc " << batchNumber << std::endl;
+        int batchNumber = logPosition / batchSize - 1;
         std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
         latch->count_down_and_wait();
     }
 }
 
 bool ConcurrencyControl::isKeyInThePartition(int key) const {
-    return std::hash<int>{}(key) % Constants::CC_THREADS_NUMBER == threadNumber;
+    return std::hash<int>{}(key) % totalCCThreads == threadNumber;
 }

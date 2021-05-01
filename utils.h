@@ -10,26 +10,79 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <boost/thread/latch.hpp>
+#include <thread>
+#include "state.h"
+#include "input.h"
+#include "concurrency_control.h"
+#include "execution.h"
 
 class Utils {
 public:
-    template<class T>
-    static void printVector(std::ostream &os, std::vector<T> vec) {
-        for(auto i : vec) {
-            os << i << " ";
-        }
-        os << std::endl;
-    }
-    template<class T1,class T2>
-    static void printMap(std::ostream &os, tbb::concurrent_unordered_map<T1,std::shared_ptr<T2>>& map) {
-        for(auto elem : map)
-        {
+
+    template<class T1, class T2>
+    static void printMap(std::ostream &os, tbb::concurrent_unordered_map<T1, std::shared_ptr<T2>> &map) {
+        for (auto elem : map) {
             os << "[" << elem.first << " " << *elem.second << "]" << ", ";
         }
         os << std::endl;
     }
+
+    static std::vector<std::shared_ptr<boost::latch>> initLatches(int ccThreadsNumber, unsigned long latchesSize) {
+        std::vector<std::shared_ptr<boost::latch>> latches(latchesSize);
+
+        for (int i = 0; i < latchesSize; ++i) {
+            latches[i] = std::make_shared<boost::latch>(ccThreadsNumber);
+        }
+
+        return latches;
+    }
+
+    static tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>>
+    initTimestampToTransactionState(unsigned long size) {
+        tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> timestampToTransactionState;
+        for (int i = 0; i < size; ++i) {
+            timestampToTransactionState[i] = std::make_shared<TransactionState>(TransactionState::unprocessed);
+        }
+
+        return timestampToTransactionState;
+    }
+
+    static std::vector<std::thread>
+    startCCThreads(std::vector<std::shared_ptr<boost::latch>> &latches,
+                   tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                   tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+                   int ccThreadsNumber,
+                   int batchSize) {
+        std::vector<std::thread> ccThreads(ccThreadsNumber);
+        for (int i = 0; i < ccThreadsNumber; i++) {
+            std::cout << "main() : creating cc thread, " << i << std::endl;
+            ConcurrencyControl cc{recordsMap, logTransactions, latches, i, ccThreadsNumber, batchSize};
+            ccThreads[i] = std::thread(&ConcurrencyControl::readFromLog, cc);
+        }
+        return ccThreads;
+
+    }
+
+static std::vector<std::thread>
+    startEThreads(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+                  tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                  tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+                  std::vector<std::shared_ptr<boost::latch>> &latches,
+                  int eThreadsNumber,
+                  int batchSize) {
+            std::vector<std::thread> eThreads(eThreadsNumber);
+        for (int i = 0; i < eThreadsNumber; i++) {
+            std::cout << "main() : creating execution thread, " << i << std::endl;
+            Execution execution{recordsMap, logTransactions,
+                                timestampToTransactionState, latches, i, eThreadsNumber, batchSize};
+            eThreads[i] = std::thread(&Execution::readFromLog, execution);
+        }
+        return eThreads;
+
+    }
+
 };
-
-
 #endif //PDB_UTILS_H

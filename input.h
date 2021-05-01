@@ -6,7 +6,6 @@
 #define PDB_INPUT_H
 
 #include "input_types.h"
-#include "utils.h"
 #include <utility>
 #include <vector>
 #include <ostream>
@@ -46,6 +45,17 @@ struct Operation {
            << " keyRange: " << operation.keyRange;
         return os;
     }
+
+    bool operator==(const Operation &rhs) const {
+        return inputType == rhs.inputType &&
+               key == rhs.key &&
+               value == rhs.value &&
+               keyRange == rhs.keyRange;
+    }
+
+    bool operator!=(const Operation &rhs) const {
+        return !(rhs == *this);
+    }
 };
 
 struct Transaction {
@@ -54,13 +64,32 @@ struct Transaction {
 
     friend std::ostream &operator<<(std::ostream &os, const Transaction &transaction) {
         os << "operations: ";
-        Utils::printVector(os, transaction.operations);
+        printVector(os, transaction.operations);
         os << " timestamp: " << transaction.timestamp;
         return os;
     }
 
     Transaction(std::vector<Operation> operations, long timestamp) : operations(std::move(operations)),
                                                                      timestamp(timestamp) {}
+
+    bool operator==(const Transaction &rhs) const {
+        return std::equal(operations.begin(), operations.end(), rhs.operations.begin()) &&
+               timestamp == rhs.timestamp;
+    }
+
+    bool operator!=(const Transaction &rhs) const {
+        return !(rhs == *this);
+    }
+
+private:
+    template<class T>
+    static void printVector(std::ostream &os, std::vector<T> vec) {
+        for (auto i : vec) {
+            os << i << " ";
+        }
+        os << std::endl;
+    }
+
 };
 
 #endif //PDB_INPUT_H
