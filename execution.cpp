@@ -3,9 +3,11 @@
 //
 
 #include <iostream>
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/ostr.h"
 #include "execution.h"
 #include "constants.h"
-#include "state.h"
+#include "structures/state.h"
 
 Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
                      const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
@@ -23,9 +25,10 @@ Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>
           batchSize(batchSize) {}
 
 void Execution::readFromLog() {
+
     while (batchPosition + batchSize <= logTransactions.size()) {
         int batchNumber = batchPosition / batchSize;
-        std::cout << "batchNumber in et " << batchNumber << std::endl;
+        spdlog::info("batch {} in execution thread {}", batchNumber, threadNumber);
 
         std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
         latch->wait();
@@ -33,7 +36,7 @@ void Execution::readFromLog() {
         for (int i = threadNumber + batchPosition;
              i < batchPosition + batchSize; i += totalEThreads) {
             transactionsToExecute.push(i);
-            std::cout << "thread number " << threadNumber << " transaction to execute " << i << std::endl;
+            spdlog::info("thread number {}, transaction to execute {}", threadNumber, i);
         }
         batchPosition += batchSize;
         while (!transactionsToExecute.empty()) {
@@ -47,7 +50,6 @@ void Execution::readFromLog() {
 }
 
 bool Execution::executeTransaction(long timestamp) {
-    //TODO: check this lock transaction
     std::shared_ptr<TransactionState> &state = timestampToTransactionState[timestamp];
     auto currentState = &state;
     if (**currentState != TransactionState::unprocessed) {
@@ -65,7 +67,7 @@ bool Execution::executeTransaction(long timestamp) {
         bool success;
         switch (operation.inputType) {
             case InputTypes::read:
-                success = executeReadOperation(operation, transaction->timestamp);
+                success = executeReadOperation(operation, transaction->timestamp) != Constants::INITIALIZED_VALUE;
                 break;
             case InputTypes::update:
                 success = executeUpdateOperation(operation, transaction->timestamp);
@@ -73,38 +75,57 @@ bool Execution::executeTransaction(long timestamp) {
             case InputTypes::insert:
                 success = executeInsertOperation(operation);
                 break;
-            //TODO: implement modify and scan
             case InputTypes::modify:
+                success = executeModifyOperation(operation, timestamp);
                 break;
             case InputTypes::scan:
+                success = executeScanOperation(operation, timestamp);
                 break;
-
         }
 
         if (!success) {
+            timestampToTransactionState[timestamp] = std::make_shared<TransactionState>(TransactionState::unprocessed);
             return false;
         }
     }
+
+    timestampToTransactionState[timestamp] = std::make_shared<TransactionState>(TransactionState::done);
     return true;
 
 
 }
 
-bool Execution::executeReadOperation(Operation operation, long timestamp) {
-    std::shared_ptr<Record> &record = recordsMap.at(operation.key);
+double Execution::executeReadOperation(Operation operation, long timestamp) {
+    return readValue(operation.key, timestamp);
+}
+
+double Execution::readValue(int key, long timestamp) {
+    std::shared_ptr<Record> record = recordsMap.at(key);
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
-//        if (record == nullptr) {
-//            return false;
-//        }
-    }
-    std::cout << "record value " << record->value;
-
-    if (record->value == Constants::INITIALIZED_VALUE) {
-        return executeTransaction(record->transaction.timestamp);
+        if (record == nullptr) {
+            spdlog::error("could not find the correct value, key {}, timestamp {}",
+                          key, timestamp);
+            return Constants::INITIALIZED_VALUE;
+        }
     }
 
-    return true;
+
+    if (record->value != Constants::INITIALIZED_VALUE) {
+        spdlog::info("read operation: record value {}", record->value);
+        return record->value;
+    }
+
+    spdlog::debug("record still wasn't processed , key {}, timestamp {}",
+                  key, timestamp);
+
+    if (executeTransaction(record->transaction.timestamp)) {
+        assert(record->value != Constants::INITIALIZED_VALUE);
+        spdlog::info("read operation: record value {}", record->value);
+        return record->value;
+    }
+
+    return Constants::INITIALIZED_VALUE;
 }
 
 bool Execution::isTimestampInRange(long timestamp, long beginTimestamp, long endTimestamp) {
@@ -115,25 +136,66 @@ bool Execution::isTimestampInRange(long timestamp, long beginTimestamp, long end
 }
 
 bool Execution::executeUpdateOperation(Operation operation, long timestamp) {
-    std::shared_ptr<Record> &record = recordsMap.at(operation.key);
+    std::shared_ptr<Record> record = recordsMap.at(operation.key);
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
     }
     record->value = operation.value;
-    std::cout << "updated record value " << record->value;
+    spdlog::info("updated record value {} for timestamp {}", record->value, timestamp);
 
     return true;
 }
 
 bool Execution::executeInsertOperation(Operation operation) {
-    std::shared_ptr<Record> &record = recordsMap.at(operation.key);
+    std::shared_ptr<Record> record = recordsMap.at(operation.key);
+
+    while (record->prev != nullptr) {
+        record = record->prev;
+    }
+
     if (record->value != Constants::INITIALIZED_VALUE) {
         //it depend on how you do the recovery in case failing in completing a transaction
-        std::cout << "fatal error, insert should be the first value";
-
+        spdlog::error("insert should be the first value, operation: {}", operation);
     }
+
     record->value = operation.value;
 
+    return true;
+}
+
+bool Execution::executeModifyOperation(Operation operation, long timestamp) {
+    double value = readValue(operation.key, timestamp - 1);
+    if (value == Constants::INITIALIZED_VALUE) {
+        return false;
+    }
+
+    std::shared_ptr<Record> record = recordsMap.at(operation.key);
+    while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
+        record = record->prev;
+    }
+    std::shared_ptr<Record> &pervRecord = record->prev;
+
+    if (pervRecord->value == operation.value) {
+        record->value = operation.value + 1;
+    } else {
+        record->value = pervRecord->value;
+    }
+
+    spdlog::info("updated record value {} for timestamp {}", record->value, timestamp);
+
+    return true;
+}
+
+bool Execution::executeScanOperation(Operation operation, long timestamp) {
+    spdlog::debug("scan operation, operation: ", operation);
+
+    double value;
+    for (int i = 0; i < operation.range; ++i) {
+        value = readValue(operation.key + i, timestamp);
+        if (value == Constants::INITIALIZED_VALUE) {
+            return false;
+        }
+    }
     return true;
 }
 

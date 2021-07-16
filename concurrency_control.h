@@ -10,7 +10,7 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <boost/thread/latch.hpp>
-#include "record.h"
+#include "structures/record.h"
 #include "constants.h"
 
 class ConcurrencyControl {

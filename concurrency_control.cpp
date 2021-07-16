@@ -5,6 +5,8 @@
 #include <climits>
 #include <memory>
 #include <iostream>
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/ostr.h"
 #include "concurrency_control.h"
 
 ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
@@ -21,22 +23,27 @@ ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::s
           batchSize(batchSize){}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
+    spdlog::debug("writing operation {}, timestamp {}", operation, transaction.timestamp);
+
     if (recordsMap.count(operation.key)) {
         auto prevRecord = recordsMap.at(operation.key);
         prevRecord->endTimestamp = transaction.timestamp;
         auto newRecord =
                 std::make_shared<Record>(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE,
                                          prevRecord);
-        recordsMap.emplace(operation.key, newRecord);
+        recordsMap[operation.key] = newRecord;
+        spdlog::info("adding new record for key {}, timestamp {}", newRecord, transaction.timestamp);
     } else {
         Record record(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE, nullptr);
         recordsMap.emplace(operation.key, std::make_shared<Record>(record));
+        spdlog::info("writing first record for key {}, timestamp {}", record, transaction.timestamp);
     }
 }
 
 void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
+    spdlog::debug("writing transaction {}", transaction);
+
     for (Operation operation : transaction.operations) {
-//        std::cout << "cc thread " << threadNumber << " operation.key " << operation.key << " isKeyInThePartition " << isKeyInThePartition(operation.key) << std::endl;
         if (!isKeyInThePartition(operation.key)) {
             continue;
         }
@@ -60,6 +67,7 @@ void ConcurrencyControl::readFromLog() {
     }
 }
 
+//TODO: check if need to change the hash function
 bool ConcurrencyControl::isKeyInThePartition(int key) const {
-    return std::hash<int>{}(key) % totalCCThreads == threadNumber;
+    return (std::hash<int>{}(key) % totalCCThreads) == threadNumber;
 }

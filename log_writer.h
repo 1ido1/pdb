@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <tbb/concurrent_vector.h>
-#include "input.h"
+#include "structures/input.h"
 
  class LogWriter {
      tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;

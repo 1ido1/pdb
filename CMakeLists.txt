@@ -41,19 +41,22 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "~/CLionProjects/FindTBB")
 
 find_package(TBB COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
+if(NOT TARGET spdlog)
+    # Stand-alone build
+    find_package(spdlog REQUIRED)
+endif()
+
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-add_executable(pdb main.cpp log_writer.cpp log_writer.h input_types.h input.h concurrency_control.cpp concurrency_control.h record.h utils.cpp utils.h execution.h execution.cpp constants.h state.h
-        tests/fac_unit_tests.cpp tests/fac.cpp tests/fac.h tests/integration_tests.cpp tests/gtest_main.cc tests/cc_tests.cpp)
-#add_executable(pdb main.cpp log_writer.cpp log_writer.h input_types.h input.h concurrency_control.cpp concurrency_control.h record.h utils.cpp utils.h execution.h execution.cpp constants.h state.h)
+add_executable(pdb main.cpp log_writer.cpp log_writer.h structures/input_types.h structures/input.h concurrency_control.cpp concurrency_control.h structures/record.h utils.cpp utils.h execution.h execution.cpp constants.h structures/state.h
+        tests/integration_tests.cpp tests/gtest_main.cc tests/cc_tests.cpp tests/execution_tests.cpp read_input_file.h tests/read_input_file_tests.cpp read_input_file.cpp)
 
 target_link_libraries(pdb gtest_main)
 target_link_libraries(pdb tbb)
 target_link_libraries(pdb Threads::Threads)
 target_link_libraries(pdb ${Boost_LIBRARIES})
-add_test(NAME FactorialTest COMMAND pdb)
 
 # for testing
 add_definitions(-DTESTING)

@@ -14,12 +14,14 @@ struct Operation {
     InputTypes inputType;
     int key;
     double value;
-    int keyRange;
+    int range;
 
-    Operation(InputTypes inputType, int key, double value, int keyRange) : inputType(inputType), key(key), value(value),
-                                                                           keyRange(keyRange) {}
-    Operation(InputTypes inputType, int key, double value) : inputType(inputType), key(key), value(value) {}
-    Operation(InputTypes inputType, int key) : inputType(inputType), key(key) {}
+    Operation(InputTypes inputType, int key, double value, int range) : inputType(inputType), key(key), value(value),
+                                                                        range(range) {}
+
+    Operation(InputTypes inputType, int key, double value) : inputType(inputType), key(key), value(value), range(0) {}
+
+    Operation(InputTypes inputType, int key) : inputType(inputType), key(key), value(0), range(0) {}
 
 
     friend std::ostream &operator<<(std::ostream &os, const Operation &operation) {
@@ -42,7 +44,7 @@ struct Operation {
                 break;
         }
         os << " key: " << operation.key << " value: " << operation.value
-           << " keyRange: " << operation.keyRange;
+           << " keyRange: " << operation.range;
         return os;
     }
 
@@ -50,7 +52,7 @@ struct Operation {
         return inputType == rhs.inputType &&
                key == rhs.key &&
                value == rhs.value &&
-               keyRange == rhs.keyRange;
+               range == rhs.range;
     }
 
     bool operator!=(const Operation &rhs) const {

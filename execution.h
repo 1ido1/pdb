@@ -13,8 +13,8 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <boost/thread/latch.hpp>
-#include "record.h"
-#include "state.h"
+#include "structures/record.h"
+#include "structures/state.h"
 
 class Execution {
 private:
@@ -41,13 +41,19 @@ public:
 
     bool executeTransaction(long timestamp);
 
-    bool executeReadOperation(Operation operation, long timestamp);
+    double executeReadOperation(Operation operation, long timestamp);
 
-    bool isTimestampInRange(long timestamp, long beginTimestamp, long endTimestamp);
+    bool executeScanOperation(Operation operation, long timestamp);
+
+    static bool isTimestampInRange(long timestamp, long beginTimestamp, long endTimestamp);
 
     bool executeUpdateOperation(Operation operation, long timestamp);
 
     bool executeInsertOperation(Operation operation);
+
+    bool executeModifyOperation(Operation operation, long timestamp);
+
+    double readValue(int key, long timestamp);
 };
 
 #endif //PDB_EXECUTION_H

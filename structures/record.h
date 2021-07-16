@@ -34,7 +34,8 @@ public:
                endTimestamp == rhs.endTimestamp &&
                transaction == rhs.transaction &&
                value == rhs.value &&
-               prev == rhs.prev;
+                (prev == nullptr && rhs.prev == nullptr ||
+               *prev == *rhs.prev);
     }
 
     bool operator!=(const Record &rhs) const {

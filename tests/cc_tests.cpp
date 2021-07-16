@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include <vector>
 #include <memory>
-#include "../input.h"
+#include "../structures/input.h"
 #include "../concurrency_control.h"
 #include "../execution.h"
 #include "../utils.h"
@@ -29,7 +29,7 @@ namespace {
         }
     }
 
-    TEST(ExcutionTests, OneThread) {
+    TEST(CCTests, InsertOperation) {
         const int ccThreadsNumber = 1;
         const int batchSize = 1;
 
@@ -50,7 +50,35 @@ namespace {
         EXPECT_EQ(*recordsMap[0].get(), expectedRecord);
     }
 
-    TEST(ExcutionTests, TwoThreads) {
+
+    TEST(CCTests, UpdateOperation) {
+        const int ccThreadsNumber = 1;
+        const int batchSize = 2;
+
+        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
+        std::vector<Operation> insertOperation{Operation{InputTypes::insert, 0, 1}
+        };
+        std::vector<Operation> updateOperation{Operation{InputTypes::update, 0, 2}
+        };
+
+        const std::shared_ptr<Transaction> &transaction1 = std::make_shared<Transaction>(insertOperation, 0);
+        const std::shared_ptr<Transaction> &transaction2 = std::make_shared<Transaction>(updateOperation, 1);
+        logTransactions.push_back(transaction1);
+        logTransactions.push_back(transaction2);
+        Record firstRecord{0, 1, *transaction1, Constants::INITIALIZED_VALUE, nullptr};
+        Record expectedRecord{1, LONG_MAX, *transaction2,
+                              Constants::INITIALIZED_VALUE, std::make_shared<Record>(firstRecord)};
+
+        std::vector<std::shared_ptr<boost::latch>> latches =
+                Utils::initLatches(ccThreadsNumber, logTransactions.size() / batchSize);
+        executeCCThreads(recordsMap, logTransactions, latches, ccThreadsNumber, batchSize);
+
+        EXPECT_EQ(recordsMap.size(), 1);
+        EXPECT_EQ(*recordsMap[0].get(), expectedRecord);
+    }
+
+    TEST(CCTests, TwoThreads) {
         const int ccThreadsNumber = 2;
         const int batchSize = 2;
 

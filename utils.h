@@ -14,8 +14,9 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <boost/thread/latch.hpp>
 #include <thread>
-#include "state.h"
-#include "input.h"
+#include "spdlog/spdlog.h"
+#include "structures/state.h"
+#include "structures/input.h"
 #include "concurrency_control.h"
 #include "execution.h"
 
@@ -58,7 +59,7 @@ public:
                    int batchSize) {
         std::vector<std::thread> ccThreads(ccThreadsNumber);
         for (int i = 0; i < ccThreadsNumber; i++) {
-            std::cout << "main() : creating cc thread, " << i << std::endl;
+            spdlog::info("creating cc thread {}", i);
             ConcurrencyControl cc{recordsMap, logTransactions, latches, i, ccThreadsNumber, batchSize};
             ccThreads[i] = std::thread(&ConcurrencyControl::readFromLog, cc);
         }
@@ -75,7 +76,7 @@ static std::vector<std::thread>
                   int batchSize) {
             std::vector<std::thread> eThreads(eThreadsNumber);
         for (int i = 0; i < eThreadsNumber; i++) {
-            std::cout << "main() : creating execution thread, " << i << std::endl;
+            spdlog::info("creating execution thread {}", i);
             Execution execution{recordsMap, logTransactions,
                                 timestampToTransactionState, latches, i, eThreadsNumber, batchSize};
             eThreads[i] = std::thread(&Execution::readFromLog, execution);
