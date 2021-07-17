@@ -25,7 +25,7 @@ private:
     int threadNumber;
     int totalEThreads;
     int batchSize;
-    long batchPosition = 0;
+    long logPosition = 0;
     long batchNumber = 0;
     std::queue<int> transactionsToExecute;
 

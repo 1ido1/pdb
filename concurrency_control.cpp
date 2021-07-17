@@ -69,7 +69,10 @@ void ConcurrencyControl::readFromLogByBatchSize(int batchSize) {
 void ConcurrencyControl::readFromLog() {
     readFromLogByBatchSize(batchSize);
     // last batch
-    readFromLogByBatchSize(logTransactions.size() - logPosition);
+    unsigned long remainder = logTransactions.size() - logPosition;
+    if (remainder > 0) {
+        readFromLogByBatchSize(remainder);
+    }
 }
 
 //TODO: check if need to change the hash function

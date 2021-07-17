@@ -27,22 +27,25 @@ Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>
 void Execution::readFromLog() {
     readFromLogByBatchSize(batchSize);
     // last batch
-    readFromLogByBatchSize(logTransactions.size() - batchPosition);
+    unsigned long remainder = logTransactions.size() - logPosition;
+    if (remainder > 0) {
+        readFromLogByBatchSize(remainder);
+    }
 }
 
 void Execution::readFromLogByBatchSize(int batchSize) {
-    while (batchPosition + batchSize <= logTransactions.size()) {
+    while (logPosition + batchSize <= logTransactions.size()) {
         spdlog::info("batch {} in execution thread {}", batchNumber, threadNumber);
 
         std::shared_ptr<boost::latch> &latch = latches.at(batchNumber++);
         latch->wait();
 
-        for (int i = threadNumber + batchPosition;
-             i < batchPosition + batchSize; i += totalEThreads) {
+        for (int i = threadNumber + logPosition;
+             i < logPosition + batchSize; i += totalEThreads) {
             transactionsToExecute.push(i);
             spdlog::info("thread number {}, transaction to execute {}", threadNumber, i);
         }
-        batchPosition += batchSize;
+        logPosition += batchSize;
         while (!transactionsToExecute.empty()) {
             int timestamp = transactionsToExecute.front();
             transactionsToExecute.pop();
