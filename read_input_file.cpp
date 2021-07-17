@@ -14,12 +14,12 @@ std::vector<std::shared_ptr<Transaction>> ReadInputFile::readFile(
 std::vector<std::shared_ptr<Transaction>> ReadInputFile::readFile(
         const std::string &path, int transactionSize, long timestamp) {
     std::string line;
-    std::ifstream MyReadFile(path);
+    std::ifstream myReadFile(path);
     std::vector<Operation> operations;
     std::vector<std::shared_ptr<Transaction>> transactions{std::vector<std::shared_ptr<Transaction>>()};
 
 
-    while (getline(MyReadFile, line)) {
+    while (getline(myReadFile, line)) {
         operations.push_back(parseLine(line));
 
         if (operations.size() == transactionSize) {
@@ -32,7 +32,7 @@ std::vector<std::shared_ptr<Transaction>> ReadInputFile::readFile(
         transactions.push_back(std::make_shared<Transaction>(operations, timestamp++));
     }
 
-    MyReadFile.close();
+    myReadFile.close();
     return transactions;
 }
 

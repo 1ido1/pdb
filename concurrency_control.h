@@ -22,8 +22,12 @@ private:
     int threadNumber;
     int totalCCThreads;
     int batchSize;
+    long batchNumber = 0;
 
     bool isKeyInThePartition(int key) const;
+    void readFromLogByBatchSize(int batchSize);
+    void writeOperation(Operation operation, const Transaction &transaction);
+    void writeTransaction(const Transaction &transaction);
 
 public:
     ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
@@ -32,9 +36,8 @@ public:
                        int threadNumber,
                        int totalCCThreads,
                        int batchSize);
-    void writeOperation(Operation operation, const Transaction &transaction);
-    void writeTransaction(const Transaction &transaction);
     void readFromLog();
+
 };
 
 

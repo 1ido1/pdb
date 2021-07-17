@@ -26,7 +26,7 @@ namespace {
         expectedTransactions.push_back(std::make_shared<Transaction>(operations, 0));
 
         const std::vector<std::shared_ptr<Transaction>> &output = ReadInputFile::readFile(
-                "/home/bayda/CLionProjects/pdb/resources/example", 5);
+                "../resources/example", 5);
 
         EXPECT_EQ_PTR_VEC(output, expectedTransactions);
     }
@@ -50,7 +50,7 @@ namespace {
 
 
         const std::vector<std::shared_ptr<Transaction>> &output = ReadInputFile::readFile(
-                "/home/bayda/CLionProjects/pdb/resources/example", 2);
+                "../resources/example", 2);
 
         EXPECT_EQ_PTR_VEC(output, expectedTransactions);
     }
@@ -71,7 +71,7 @@ namespace {
         expectedTransactions.push_back(std::make_shared<Transaction>(operations2, 1));
 
         const std::vector<std::shared_ptr<Transaction>> &output = ReadInputFile::readFile(
-                "/home/bayda/CLionProjects/pdb/resources/example", 3);
+                "../resources/example", 3);
 
         EXPECT_EQ_PTR_VEC(output, expectedTransactions);
     }
@@ -109,8 +109,8 @@ namespace {
         expectedTransactions.push_back(std::make_shared<Transaction>(operations6, 5));
 
 
-        std::vector<std::string> paths{"/home/bayda/CLionProjects/pdb/resources/example",
-                                       "/home/bayda/CLionProjects/pdb/resources/example2"};
+        std::vector<std::string> paths{"../resources/example",
+                                       "../resources/example2"};
         const std::vector<std::shared_ptr<Transaction>> &output = ReadInputFile::readFiles(
                 paths, 2);
 

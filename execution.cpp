@@ -25,12 +25,16 @@ Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>
           batchSize(batchSize) {}
 
 void Execution::readFromLog() {
+    readFromLogByBatchSize(batchSize);
+    // last batch
+    readFromLogByBatchSize(logTransactions.size() - batchPosition);
+}
 
+void Execution::readFromLogByBatchSize(int batchSize) {
     while (batchPosition + batchSize <= logTransactions.size()) {
-        int batchNumber = batchPosition / batchSize;
         spdlog::info("batch {} in execution thread {}", batchNumber, threadNumber);
 
-        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
+        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber++);
         latch->wait();
 
         for (int i = threadNumber + batchPosition;

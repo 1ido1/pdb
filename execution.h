@@ -25,8 +25,19 @@ private:
     int threadNumber;
     int totalEThreads;
     int batchSize;
-    int batchPosition = 0;
+    long batchPosition = 0;
+    long batchNumber = 0;
     std::queue<int> transactionsToExecute;
+
+    void readFromLogByBatchSize(int batchSize);
+    bool executeTransaction(long timestamp);
+    double executeReadOperation(Operation operation, long timestamp);
+    bool executeScanOperation(Operation operation, long timestamp);
+    static bool isTimestampInRange(long timestamp, long beginTimestamp, long endTimestamp);
+    bool executeUpdateOperation(Operation operation, long timestamp);
+    bool executeInsertOperation(Operation operation);
+    bool executeModifyOperation(Operation operation, long timestamp);
+    double readValue(int key, long timestamp);
 
 public:
     Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
@@ -39,21 +50,6 @@ public:
 
     void readFromLog();
 
-    bool executeTransaction(long timestamp);
-
-    double executeReadOperation(Operation operation, long timestamp);
-
-    bool executeScanOperation(Operation operation, long timestamp);
-
-    static bool isTimestampInRange(long timestamp, long beginTimestamp, long endTimestamp);
-
-    bool executeUpdateOperation(Operation operation, long timestamp);
-
-    bool executeInsertOperation(Operation operation);
-
-    bool executeModifyOperation(Operation operation, long timestamp);
-
-    double readValue(int key, long timestamp);
 };
 
 #endif //PDB_EXECUTION_H

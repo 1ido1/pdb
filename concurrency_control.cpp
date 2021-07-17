@@ -20,7 +20,7 @@ ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::s
           latches(latches),
           threadNumber(threadNumber),
           totalCCThreads(totalCCThreads),
-          batchSize(batchSize){}
+          batchSize(batchSize) {}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
     spdlog::debug("writing operation {}, timestamp {}", operation, transaction.timestamp);
@@ -55,16 +55,21 @@ void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
     }
 }
 
-void ConcurrencyControl::readFromLog() {
+void ConcurrencyControl::readFromLogByBatchSize(int batchSize) {
     while (logPosition + batchSize <= logTransactions.size()) {
         for (int i = 0; i < batchSize; ++i) {
             writeTransaction(*logTransactions.at(logPosition++));
         }
 
-        int batchNumber = logPosition / batchSize - 1;
-        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber);
+        std::shared_ptr<boost::latch> &latch = latches.at(batchNumber++);
         latch->count_down_and_wait();
     }
+}
+
+void ConcurrencyControl::readFromLog() {
+    readFromLogByBatchSize(batchSize);
+    // last batch
+    readFromLogByBatchSize(logTransactions.size() - logPosition);
 }
 
 //TODO: check if need to change the hash function
