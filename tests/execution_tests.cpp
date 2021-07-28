@@ -16,15 +16,20 @@
 
 namespace {
 
-    void executeEThreads(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+    void executeEThreads(RecordsMap &recordsMap,
                          tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                          tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
                          std::vector<std::shared_ptr<boost::latch>> &latches,
                          int eThreadsNumber,
                          int batchSize) {
+        int ccThreadsNumber = 1;
+        std::vector<RecordsMapPtr>
+                recordsPartitionedByCct{std::make_shared<tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>>(
+                        recordsMap)};
+
         std::vector<std::thread> eThreads = Utils::startEThreads(
-                recordsMap, logTransactions, timestampToTransactionState,
-                latches, eThreadsNumber, batchSize);
+                recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+                latches, eThreadsNumber, ccThreadsNumber, batchSize);
 
         for (auto &th : eThreads) {
             th.join();
@@ -147,8 +152,11 @@ namespace {
 
         Record expectedRecord{0, LONG_MAX, *transaction1, 1, nullptr};
 
-        Execution execution{recordsMap, logTransactions,
-                            idToTransactionState, latches, 1, eThreadsNumber, batchSize};
+        std::vector<RecordsMapPtr>
+                recordsPartitionedByCct{std::make_shared<tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>>(
+                recordsMap)};
+        Execution execution{recordsPartitionedByCct, logTransactions,
+                            idToTransactionState, latches, 1, eThreadsNumber, 1, batchSize};
         execution.readFromLog();
 
         EXPECT_EQ(recordsMap.size(), 1);

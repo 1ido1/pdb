@@ -8,20 +8,25 @@
 #include "execution.h"
 #include "constants.h"
 #include "structures/state.h"
+#include "utils.h"
 
-Execution::Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
-                     const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                     tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
-                     std::vector<std::shared_ptr<boost::latch>> &latches,
-                     int threadNumber,
-                     int totalEThreads,
-                     int batchSize)
-        : recordsMap(recordsMap),
+Execution::Execution(
+        std::vector<RecordsMapPtr>
+        &recordsPartitionedByCct,
+        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+        tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+        std::vector<std::shared_ptr<boost::latch>> &latches,
+        int threadNumber,
+        int totalEThreads,
+        int totalCCThreads,
+        int batchSize)
+        : recordsPartitionedByCct(recordsPartitionedByCct),
           logTransactions(logTransactions),
           timestampToTransactionState(timestampToTransactionState),
           latches(latches),
           threadNumber(threadNumber),
           totalEThreads(totalEThreads),
+          totalCCThreads(totalCCThreads),
           batchSize(batchSize) {}
 
 void Execution::readFromLog() {
@@ -107,7 +112,8 @@ double Execution::executeReadOperation(Operation operation, long timestamp) {
 }
 
 double Execution::readValue(int key, long timestamp) {
-    std::shared_ptr<Record> record = recordsMap.at(key);
+    int ccThreadNumber = Utils::getCcThreadNumber(key, totalCCThreads);
+    std::shared_ptr<Record> record = recordsPartitionedByCct.at(ccThreadNumber)->at(key);
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
         if (record == nullptr) {
@@ -143,18 +149,23 @@ bool Execution::isTimestampInRange(long timestamp, long beginTimestamp, long end
 }
 
 bool Execution::executeUpdateOperation(Operation operation, long timestamp) {
-    std::shared_ptr<Record> record = recordsMap.at(operation.key);
+    int ccThreadNumber = Utils::getCcThreadNumber(operation.key, totalCCThreads);
+    std::shared_ptr<Record> record = recordsPartitionedByCct.at(
+            ccThreadNumber)->at(operation.key);
+
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
     }
     record->value = operation.value;
-    spdlog::info("updated record value {} for timestamp {}", record->value, timestamp);
+    spdlog::info("updated record value {} for timestamp {} in thread {}", record->value, timestamp, threadNumber);
 
     return true;
 }
 
 bool Execution::executeInsertOperation(Operation operation) {
-    std::shared_ptr<Record> record = recordsMap.at(operation.key);
+    int ccThreadNumber = Utils::getCcThreadNumber(operation.key, totalCCThreads);
+
+    std::shared_ptr<Record> record = recordsPartitionedByCct.at(ccThreadNumber)->at(operation.key);
 
     while (record->prev != nullptr) {
         record = record->prev;
@@ -176,7 +187,8 @@ bool Execution::executeModifyOperation(Operation operation, long timestamp) {
         return false;
     }
 
-    std::shared_ptr<Record> record = recordsMap.at(operation.key);
+    int ccThreadNumber = Utils::getCcThreadNumber(operation.key, totalCCThreads);
+    std::shared_ptr<Record> record = recordsPartitionedByCct.at(ccThreadNumber)->at(operation.key);
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
     }
@@ -188,7 +200,7 @@ bool Execution::executeModifyOperation(Operation operation, long timestamp) {
         record->value = pervRecord->value;
     }
 
-    spdlog::info("updated record value {} for timestamp {}", record->value, timestamp);
+    spdlog::info("updated record value {} for timestamp {} in thread {}", record->value, timestamp, threadNumber);
 
     return true;
 }

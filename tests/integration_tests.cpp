@@ -3,7 +3,6 @@
 //
 
 #include "gtest/gtest.h"
-#include <iostream>
 #include <vector>
 #include <memory>
 #include "../structures/input.h"
@@ -18,17 +17,18 @@
 
 
 namespace {
-Record createUpdatedRecord(double insertedValue,
-                           double updatedValue,
-                           const std::shared_ptr<Transaction> &transaction1,
-                           const std::shared_ptr<Transaction> &transaction2) {
-    Record expectedFirstRecord{0, 1, *transaction1, insertedValue, nullptr};
-    Record expectedUpdatedRecord{1, LONG_MAX, *transaction2,
-                                 updatedValue, std::make_shared<Record>(expectedFirstRecord)};
+    Record createUpdatedRecord(double insertedValue,
+                               double updatedValue,
+                               const std::shared_ptr<Transaction> &transaction1,
+                               const std::shared_ptr<Transaction> &transaction2) {
+        Record expectedFirstRecord{0, 1, *transaction1, insertedValue, nullptr};
+        Record expectedUpdatedRecord{1, LONG_MAX, *transaction2,
+                                     updatedValue, std::make_shared<Record>(expectedFirstRecord)};
 
-    return expectedUpdatedRecord;
+        return expectedUpdatedRecord;
 
-}
+    }
+
     TEST(IntegrationTest, InsertTest) {
         int ccThreadsNumber = 3;
         int eThreadsNumber = 2;
@@ -62,16 +62,17 @@ Record createUpdatedRecord(double insertedValue,
         LogWriter logWriter{logTransactions};
         logWriter.writeLog(transactions);
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        std::vector<RecordsMapPtr>
+                recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
 
-        std::vector<std::thread> ccThreads= Utils::startCCThreads(
-                latches, logTransactions, recordsMap,
+        std::vector<std::thread> ccThreads = Utils::startCCThreads(
+                latches, logTransactions, recordsPartitionedByCct,
                 ccThreadsNumber, batchSize);
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
-                recordsMap, logTransactions, timestampToTransactionState,
-                latches, eThreadsNumber, batchSize
-                );
+                recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+                latches, eThreadsNumber, ccThreadsNumber, batchSize
+        );
 
         for (auto &th : ccThreads) {
             th.join();
@@ -81,9 +82,7 @@ Record createUpdatedRecord(double insertedValue,
             th.join();
         }
 
-        Utils::printMap<>(std::cout, recordsMap);
-
-        EXPECT_EQ(recordsMap.size(), 10);
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 10);
     }
 
     TEST(IntegrationTest, UpdateTest) {
@@ -99,10 +98,10 @@ Record createUpdatedRecord(double insertedValue,
         };
 
         std::vector<Operation> operations2{Operation{InputTypes::update, 0, 6754},
-                                          Operation{InputTypes::update, 4, 2345},
-                                          Operation{InputTypes::update, 3, 45345},
-                                          Operation{InputTypes::update, 77, 865},
-                                          Operation{InputTypes::update, 81, 88856},
+                                           Operation{InputTypes::update, 4, 2345},
+                                           Operation{InputTypes::update, 3, 45345},
+                                           Operation{InputTypes::update, 77, 865},
+                                           Operation{InputTypes::update, 81, 88856},
         };
 
 
@@ -121,7 +120,7 @@ Record createUpdatedRecord(double insertedValue,
         LogWriter logWriter{logTransactions};
         logWriter.writeLog(transactions);
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
 
         Record expectedRecord1 = createUpdatedRecord(2133, 6754, transaction1, transaction2);
         Record expectedRecord2 = createUpdatedRecord(345345, 2345, transaction1, transaction2);
@@ -129,13 +128,13 @@ Record createUpdatedRecord(double insertedValue,
         Record expectedRecord4 = createUpdatedRecord(3421, 865, transaction1, transaction2);
         Record expectedRecord5 = createUpdatedRecord(5333, 88856, transaction1, transaction2);
 
-        std::vector<std::thread> ccThreads= Utils::startCCThreads(
-                latches, logTransactions, recordsMap,
+        std::vector<std::thread> ccThreads = Utils::startCCThreads(
+                latches, logTransactions, recordsPartitionedByCct,
                 ccThreadsNumber, batchSize);
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
-                recordsMap, logTransactions, timestampToTransactionState,
-                latches, eThreadsNumber, batchSize
+                recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+                latches, eThreadsNumber, ccThreadsNumber, batchSize
         );
 
         for (auto &th : ccThreads) {
@@ -146,19 +145,21 @@ Record createUpdatedRecord(double insertedValue,
             th.join();
         }
 
-        EXPECT_EQ(recordsMap.size(), 5);
-        EXPECT_EQ(*recordsMap[0].get(), expectedRecord1);
-        EXPECT_EQ(*recordsMap[4].get(), expectedRecord2);
-        EXPECT_EQ(*recordsMap[3].get(), expectedRecord3);
-        EXPECT_EQ(*recordsMap[77].get(), expectedRecord4);
-        EXPECT_EQ(*recordsMap[81].get(), expectedRecord5);
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 5);
+
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 0, ccThreadsNumber), expectedRecord1);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 4, ccThreadsNumber), expectedRecord2);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 3, ccThreadsNumber), expectedRecord3);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 77, ccThreadsNumber), expectedRecord4);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 81, ccThreadsNumber), expectedRecord5);
     }
 
 
     TEST(IntegrationTest, TransactionsSizeDivdedByBatchSizeWithRemainder) {
-        int ccThreadsNumber = 2;
-        int eThreadsNumber = 2;
-        int batchSize = 2;
+        spdlog::set_level(spdlog::level::debug);
+        const int ccThreadsNumber = 2;
+        const int eThreadsNumber = 2;
+        const int batchSize = 2;
         std::vector<std::shared_ptr<Transaction>> transactions{};
         std::vector<Operation> operations1{Operation{InputTypes::insert, 0, 2133},
                                            Operation{InputTypes::insert, 81, 5333},
@@ -171,7 +172,6 @@ Record createUpdatedRecord(double insertedValue,
         std::vector<Operation> operations3{Operation{InputTypes::insert, 11, 7554},
                                            Operation{InputTypes::insert, 88, 45646},
         };
-
 
 
         const std::shared_ptr<Transaction> &transaction1 = std::make_shared<Transaction>(operations1, 0);
@@ -191,7 +191,9 @@ Record createUpdatedRecord(double insertedValue,
         LogWriter logWriter{logTransactions};
         logWriter.writeLog(transactions);
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+
+        std::vector<RecordsMapPtr>
+                recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
 
         Record expectedRecord1 = createUpdatedRecord(2133, 6754, transaction1, transaction2);
         Record expectedRecord2 = createUpdatedRecord(5333, 88856, transaction1, transaction2);
@@ -199,13 +201,13 @@ Record createUpdatedRecord(double insertedValue,
         Record expectedRecord4{2, LONG_MAX, *transaction3, 45646, nullptr};
 
 
-        std::vector<std::thread> ccThreads= Utils::startCCThreads(
-                latches, logTransactions, recordsMap,
+        std::vector<std::thread> ccThreads = Utils::startCCThreads(
+                latches, logTransactions, recordsPartitionedByCct,
                 ccThreadsNumber, batchSize);
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
-                recordsMap, logTransactions, timestampToTransactionState,
-                latches, eThreadsNumber, batchSize
+                recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+                latches, eThreadsNumber, ccThreadsNumber, batchSize
         );
 
         for (auto &th : ccThreads) {
@@ -216,10 +218,10 @@ Record createUpdatedRecord(double insertedValue,
             th.join();
         }
 
-        EXPECT_EQ(recordsMap.size(), 4);
-        EXPECT_EQ(*recordsMap[0].get(), expectedRecord1);
-        EXPECT_EQ(*recordsMap[81].get(), expectedRecord2);
-        EXPECT_EQ(*recordsMap[11].get(), expectedRecord3);
-        EXPECT_EQ(*recordsMap[88].get(), expectedRecord4);
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 4);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 0, ccThreadsNumber), expectedRecord1);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 81, ccThreadsNumber), expectedRecord2);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 11, ccThreadsNumber), expectedRecord3);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 88, ccThreadsNumber), expectedRecord4);
     }
 }  // namespace

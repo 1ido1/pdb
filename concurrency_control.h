@@ -15,7 +15,7 @@
 
 class ConcurrencyControl {
 private:
-    tbb::concurrent_unordered_map<int,std::shared_ptr<Record>>& recordsMap;
+    RecordsMapPtr& recordsMap;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;
     std::vector<std::shared_ptr<boost::latch>> &latches;
     int logPosition = 0;
@@ -30,12 +30,13 @@ private:
     void writeTransaction(const Transaction &transaction);
 
 public:
-    ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
-                       const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                       std::vector<std::shared_ptr<boost::latch>> &latches,
-                       int threadNumber,
-                       int totalCCThreads,
-                       int batchSize);
+    ConcurrencyControl(
+            RecordsMapPtr& recordsMap,
+            const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+            std::vector<std::shared_ptr<boost::latch>> &latches,
+            int threadNumber,
+            int totalCCThreads,
+            int batchSize);
     void readFromLog();
 
 };

@@ -39,15 +39,15 @@ int main(int argc, char *argv[]) {
     LogWriter logWriter{logTransactions};
     std::thread lwThread = std::thread(&LogWriter::writeLog, logWriter, transactions);
 
-    tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+    std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(Constants::CC_THREADS_NUMBER);
 
     std::vector<std::thread> ccThreads= Utils::startCCThreads(
-            latches, logTransactions, recordsMap,
+            latches, logTransactions, recordsPartitionedByCct,
             Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE);
 
     std::vector<std::thread> eThreads = Utils::startEThreads(
-            recordsMap, logTransactions, timestampToTransactionState,
-            latches, Constants::EXECUTION_THREADS_NUMBER, Constants::BATCH_SIZE
+            recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+            latches, Constants::EXECUTION_THREADS_NUMBER, Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE
     );
 
     // wait for execution to finish
@@ -61,9 +61,9 @@ int main(int argc, char *argv[]) {
         th.join();
     }
 
-    Utils::printMap<>(std::cout, recordsMap);
+//    Utils::printMap<>(std::cout, recordsMap);
     spdlog::info("transactions size {}", transactions.size());
-    spdlog::info("records size {}", recordsMap.size());
+    spdlog::info("records size {}", Utils::getRecordsSize(recordsPartitionedByCct));
 
     return 1;
 }

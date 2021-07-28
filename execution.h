@@ -15,15 +15,17 @@
 #include <boost/thread/latch.hpp>
 #include "structures/record.h"
 #include "structures/state.h"
+#include "constants.h"
 
 class Execution {
 private:
-    tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap;
+    std::vector<RecordsMapPtr> &recordsPartitionedByCct;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions;
     tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState;
     std::vector<std::shared_ptr<boost::latch>> &latches;
     int threadNumber;
     int totalEThreads;
+    int totalCCThreads;
     int batchSize;
     long logPosition = 0;
     long batchNumber = 0;
@@ -40,12 +42,13 @@ private:
     double readValue(int key, long timestamp);
 
 public:
-    Execution(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+    Execution(std::vector<RecordsMapPtr>& recordsMap,
               const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
               tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
               std::vector<std::shared_ptr<boost::latch>> &latches,
               int threadNumber,
               int totalEThreads,
+              int totalCCThreads,
               int batchSize);
 
     void readFromLog();

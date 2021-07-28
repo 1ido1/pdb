@@ -8,13 +8,15 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/ostr.h"
 #include "concurrency_control.h"
+#include "utils.h"
 
-ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
-                                       const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                                       std::vector<std::shared_ptr<boost::latch>> &latches,
-                                       int threadNumber,
-                                       int totalCCThreads,
-                                       int batchSize)
+ConcurrencyControl::ConcurrencyControl(
+        RecordsMapPtr &recordsMap,
+        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+        std::vector<std::shared_ptr<boost::latch>> &latches,
+        int threadNumber,
+        int totalCCThreads,
+        int batchSize)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           latches(latches),
@@ -23,20 +25,23 @@ ConcurrencyControl::ConcurrencyControl(tbb::concurrent_unordered_map<int, std::s
           batchSize(batchSize) {}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
-    spdlog::debug("writing operation {}, timestamp {}", operation, transaction.timestamp);
+    spdlog::debug("writing operation {}, timestamp {} in thread {}",
+                  operation, transaction.timestamp, threadNumber);
 
-    if (recordsMap.count(operation.key)) {
-        auto prevRecord = recordsMap.at(operation.key);
+    if (recordsMap->count(operation.key)) {
+        auto prevRecord = recordsMap->at(operation.key);
         prevRecord->endTimestamp = transaction.timestamp;
         auto newRecord =
                 std::make_shared<Record>(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE,
                                          prevRecord);
-        recordsMap[operation.key] = newRecord;
-        spdlog::info("adding new record for key {}, timestamp {}", newRecord, transaction.timestamp);
+        (*recordsMap)[operation.key] = newRecord;
+        spdlog::info("adding new record for key {}, timestamp {} in thread {}",
+                     newRecord, transaction.timestamp, threadNumber);
     } else {
         Record record(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE, nullptr);
-        recordsMap.emplace(operation.key, std::make_shared<Record>(record));
-        spdlog::info("writing first record for key {}, timestamp {}", record, transaction.timestamp);
+        recordsMap->emplace(operation.key, std::make_shared<Record>(record));
+        spdlog::info("writing first record for key {}, timestamp {} in thread {}",
+                     record, transaction.timestamp, threadNumber);
     }
 }
 
@@ -77,5 +82,5 @@ void ConcurrencyControl::readFromLog() {
 
 //TODO: check if need to change the hash function
 bool ConcurrencyControl::isKeyInThePartition(int key) const {
-    return (std::hash<int>{}(key) % totalCCThreads) == threadNumber;
+    return Utils::getCcThreadNumber(key, totalCCThreads) == threadNumber;
 }

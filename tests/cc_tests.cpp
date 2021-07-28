@@ -16,12 +16,12 @@
 
 namespace {
 
-    void executeCCThreads(tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> &recordsMap,
+    void executeCCThreads(std::vector<RecordsMapPtr> &recordsPartitionedByCct,
                           tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                           std::vector<std::shared_ptr<boost::latch>> &latches,
                           const int ccThreadsNumber, const int batchSize) {
         std::vector<std::thread> ccThreads = Utils::startCCThreads(
-                latches, logTransactions, recordsMap,
+                latches, logTransactions, recordsPartitionedByCct,
                 ccThreadsNumber, batchSize);
 
         for (auto &th : ccThreads) {
@@ -33,7 +33,7 @@ namespace {
         const int ccThreadsNumber = 1;
         const int batchSize = 1;
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
         tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
         std::vector<Operation> operation{Operation{InputTypes::insert, 0, 2133}
         };
@@ -44,10 +44,10 @@ namespace {
 
         std::vector<std::shared_ptr<boost::latch>> latches =
                 Utils::initLatches(ccThreadsNumber, logTransactions.size() / batchSize);
-        executeCCThreads(recordsMap, logTransactions, latches, ccThreadsNumber, batchSize);
+        executeCCThreads(recordsPartitionedByCct, logTransactions, latches, ccThreadsNumber, batchSize);
 
-        EXPECT_EQ(recordsMap.size(), 1);
-        EXPECT_EQ(*recordsMap[0].get(), expectedRecord);
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 1);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 0, ccThreadsNumber), expectedRecord);
     }
 
 
@@ -55,7 +55,7 @@ namespace {
         const int ccThreadsNumber = 1;
         const int batchSize = 2;
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
         tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
         std::vector<Operation> insertOperation{Operation{InputTypes::insert, 0, 1}
         };
@@ -72,17 +72,17 @@ namespace {
 
         std::vector<std::shared_ptr<boost::latch>> latches =
                 Utils::initLatches(ccThreadsNumber, logTransactions.size() / batchSize);
-        executeCCThreads(recordsMap, logTransactions, latches, ccThreadsNumber, batchSize);
+        executeCCThreads(recordsPartitionedByCct, logTransactions, latches, ccThreadsNumber, batchSize);
 
-        EXPECT_EQ(recordsMap.size(), 1);
-        EXPECT_EQ(*recordsMap[0].get(), expectedRecord);
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 1);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 0, ccThreadsNumber), expectedRecord);
     }
 
     TEST(CCTests, TwoThreads) {
         const int ccThreadsNumber = 2;
         const int batchSize = 2;
 
-        tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> recordsMap{};
+        std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(ccThreadsNumber);
         tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
         std::vector<Operation> operation1{Operation{InputTypes::insert, 0, 2133}
         };
@@ -101,13 +101,12 @@ namespace {
 
         std::vector<std::shared_ptr<boost::latch>> latches = Utils::initLatches(ccThreadsNumber,
                                                                                 logTransactions.size() / batchSize);
-        executeCCThreads(recordsMap, logTransactions, latches, ccThreadsNumber, batchSize);
+        executeCCThreads(recordsPartitionedByCct, logTransactions, latches, ccThreadsNumber, batchSize);
 
-        EXPECT_EQ(recordsMap.size(), 3);
-        EXPECT_EQ(*recordsMap[0].get(), expectedRecord1);
-        EXPECT_EQ(*recordsMap[5].get(), expectedRecord2);
-        EXPECT_EQ(*recordsMap[3].get(), expectedRecord3);
-
+        EXPECT_EQ(Utils::getRecordsSize(recordsPartitionedByCct), 3);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 0, ccThreadsNumber), expectedRecord1);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 5, ccThreadsNumber), expectedRecord2);
+        EXPECT_EQ(Utils::getRecord(recordsPartitionedByCct, 3, ccThreadsNumber), expectedRecord3);
     }
 
 }

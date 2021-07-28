@@ -59,7 +59,7 @@ target_link_libraries(pdb Threads::Threads)
 target_link_libraries(pdb ${Boost_LIBRARIES})
 
 # for testing
-add_definitions(-DTESTING)
+#add_definitions(-DTESTING)
 
 
 
