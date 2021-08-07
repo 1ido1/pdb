@@ -16,13 +16,16 @@
 #include <boost/thread/latch.hpp>
 
 
+void setDebugLevel();
+
 int main(int argc, char *argv[]) {
     std::vector<std::string> paths;
     if (argc == 1) {
         spdlog::info("No arguments passed to program");
         return 0;
     }
-//    spdlog::set_level(spdlog::level::debug);
+    
+    setDebugLevel();
 
     for (int i = 1; i < argc; i++) {
         paths.emplace_back(argv[i]);
@@ -67,6 +70,11 @@ int main(int argc, char *argv[]) {
     spdlog::info("records size {}", Utils::getRecordsSize(recordsPartitionedByCct));
 
     return 1;
+}
+
+void setDebugLevel() {
+    const std::string &debugLevel = Constants::getEnvironmentVariableOrDefault("LOG_LEVEL", "info");
+    spdlog::set_level(spdlog::level::from_str(debugLevel));
 }
 
 #endif
