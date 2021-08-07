@@ -67,7 +67,7 @@ namespace {
 
         std::vector<std::thread> ccThreads = Utils::startCCThreads(
                 latches, logTransactions, recordsPartitionedByCct,
-                ccThreadsNumber, batchSize);
+                ccThreadsNumber, batchSize, transactions.size());
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
                 recordsPartitionedByCct, logTransactions, timestampToTransactionState,
@@ -130,7 +130,7 @@ namespace {
 
         std::vector<std::thread> ccThreads = Utils::startCCThreads(
                 latches, logTransactions, recordsPartitionedByCct,
-                ccThreadsNumber, batchSize);
+                ccThreadsNumber, batchSize, transactions.size());
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
                 recordsPartitionedByCct, logTransactions, timestampToTransactionState,
@@ -203,7 +203,7 @@ namespace {
 
         std::vector<std::thread> ccThreads = Utils::startCCThreads(
                 latches, logTransactions, recordsPartitionedByCct,
-                ccThreadsNumber, batchSize);
+                ccThreadsNumber, batchSize, transactions.size());
 
         std::vector<std::thread> eThreads = Utils::startEThreads(
                 recordsPartitionedByCct, logTransactions, timestampToTransactionState,

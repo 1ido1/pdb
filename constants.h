@@ -7,16 +7,25 @@
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
+#include "structures/record.h"
 
 typedef tbb::concurrent_unordered_map<int, std::shared_ptr<Record>> RecordsMap;
 typedef std::shared_ptr<tbb::concurrent_unordered_map<int, std::shared_ptr<Record>>> RecordsMapPtr;
 
 class Constants {
 public:
-    const static int BATCH_SIZE = 3;
-    const static int EXECUTION_THREADS_NUMBER = 2;
-    const static int CC_THREADS_NUMBER = 3;
+    static std::string getEnvironmentVariableOrDefault(const std::string &variable_name,
+                                                       const std::string &default_value);
+
+    static int getIntEnvironmentVariableOrDefault(const std::string &variable_name,
+                                                  int default_value);
+
+    static const int BATCH_SIZE;
+    static const int EXECUTION_THREADS_NUMBER;
+    static const int CC_THREADS_NUMBER;
     constexpr static double INITIALIZED_VALUE = -9999;
+
+
 };
 
 #endif //PDB_CONSTANTS_H

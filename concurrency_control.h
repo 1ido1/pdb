@@ -23,6 +23,7 @@ private:
     int totalCCThreads;
     int batchSize;
     long batchNumber = 0;
+    unsigned long logSize;
 
     bool isKeyInThePartition(int key) const;
     void readFromLogByBatchSize(int batchSize);
@@ -36,7 +37,8 @@ public:
             std::vector<std::shared_ptr<boost::latch>> &latches,
             int threadNumber,
             int totalCCThreads,
-            int batchSize);
+            int batchSize,
+            unsigned long logSize);
     void readFromLog();
 
 };

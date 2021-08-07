@@ -51,7 +51,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 add_executable(pdb main.cpp log_writer.cpp log_writer.h structures/input_types.h structures/input.h concurrency_control.cpp concurrency_control.h structures/record.h utils.cpp utils.h execution.h execution.cpp constants.h structures/state.h
-        tests/integration_tests.cpp tests/gtest_main.cc tests/cc_tests.cpp tests/execution_tests.cpp read_input_file.h tests/read_input_file_tests.cpp read_input_file.cpp)
+        tests/integration_tests.cpp tests/gtest_main.cc tests/cc_tests.cpp tests/execution_tests.cpp read_input_file.h tests/read_input_file_tests.cpp read_input_file.cpp constants.cpp)
 
 target_link_libraries(pdb gtest_main)
 target_link_libraries(pdb tbb)

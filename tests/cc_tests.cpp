@@ -22,7 +22,7 @@ namespace {
                           const int ccThreadsNumber, const int batchSize) {
         std::vector<std::thread> ccThreads = Utils::startCCThreads(
                 latches, logTransactions, recordsPartitionedByCct,
-                ccThreadsNumber, batchSize);
+                ccThreadsNumber, batchSize, logTransactions.size());
 
         for (auto &th : ccThreads) {
             th.join();

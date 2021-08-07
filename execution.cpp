@@ -64,6 +64,10 @@ void Execution::readFromLogByBatchSize(int batchSize) {
 bool Execution::executeTransaction(long timestamp) {
     std::shared_ptr<TransactionState> &state = timestampToTransactionState[timestamp];
     auto currentState = &state;
+    if (**currentState == TransactionState::done) {
+        return true;
+    }
+
     if (**currentState != TransactionState::unprocessed) {
         return false;
     }
@@ -125,7 +129,7 @@ double Execution::readValue(int key, long timestamp) {
 
 
     if (record->value != Constants::INITIALIZED_VALUE) {
-        spdlog::info("read operation: record value {}", record->value);
+        spdlog::info("read operation: record value {} in thread {}", record->value, threadNumber);
         return record->value;
     }
 
@@ -134,7 +138,7 @@ double Execution::readValue(int key, long timestamp) {
 
     if (executeTransaction(record->transaction.timestamp)) {
         assert(record->value != Constants::INITIALIZED_VALUE);
-        spdlog::info("read operation: record value {}", record->value);
+        spdlog::info("read operation: record value {} in thread {}", record->value, threadNumber);
         return record->value;
     }
 
@@ -176,6 +180,7 @@ bool Execution::executeInsertOperation(Operation operation) {
         spdlog::error("insert should be the first value, operation: {}", operation);
     }
 
+    spdlog::debug("writing insert operation {} in thread {}", operation, threadNumber);
     record->value = operation.value;
 
     return true;
@@ -200,7 +205,7 @@ bool Execution::executeModifyOperation(Operation operation, long timestamp) {
         record->value = pervRecord->value;
     }
 
-    spdlog::info("updated record value {} for timestamp {} in thread {}", record->value, timestamp, threadNumber);
+    spdlog::debug("updated record value {} for timestamp {} in thread {}", record->value, timestamp, threadNumber);
 
     return true;
 }

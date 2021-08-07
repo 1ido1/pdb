@@ -22,11 +22,12 @@ int main(int argc, char *argv[]) {
         spdlog::info("No arguments passed to program");
         return 0;
     }
+//    spdlog::set_level(spdlog::level::debug);
 
     for (int i = 1; i < argc; i++) {
         paths.emplace_back(argv[i]);
     }
-    const std::vector<std::shared_ptr<Transaction>> &transactions = ReadInputFile::readFiles(paths, 3);
+    const std::vector<std::shared_ptr<Transaction>> &transactions = ReadInputFile::readFiles(paths, 10);
 
     std::vector<std::shared_ptr<boost::latch>> latches =
             Utils::initLatches(Constants::CC_THREADS_NUMBER,
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<std::thread> ccThreads= Utils::startCCThreads(
             latches, logTransactions, recordsPartitionedByCct,
-            Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE);
+            Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE, transactions.size());
 
     std::vector<std::thread> eThreads = Utils::startEThreads(
             recordsPartitionedByCct, logTransactions, timestampToTransactionState,

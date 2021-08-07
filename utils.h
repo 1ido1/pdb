@@ -68,14 +68,13 @@ public:
     static std::vector<std::thread>
     startCCThreads(std::vector<std::shared_ptr<boost::latch>> &latches,
                    tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                   std::vector<RecordsMapPtr>
-                   &recordsPartitionedByCct,
-                   int ccThreadsNumber,
-                   int batchSize) {
+                   std::vector<RecordsMapPtr> &recordsPartitionedByCct, int ccThreadsNumber,
+                   int batchSize, unsigned long transactionSize) {
         std::vector<std::thread> ccThreads(ccThreadsNumber);
         for (int i = 0; i < ccThreadsNumber; i++) {
             spdlog::info("creating cc thread {}", i);
-            ConcurrencyControl cc{recordsPartitionedByCct[i], logTransactions, latches, i, ccThreadsNumber, batchSize};
+            ConcurrencyControl cc{recordsPartitionedByCct[i], logTransactions, latches,
+                                  i, ccThreadsNumber, batchSize, transactionSize};
             ccThreads[i] = std::thread(&ConcurrencyControl::readFromLog, cc);
         }
         return ccThreads;

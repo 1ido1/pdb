@@ -4,7 +4,6 @@
 
 #include <climits>
 #include <memory>
-#include <iostream>
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/ostr.h"
 #include "concurrency_control.h"
@@ -16,13 +15,15 @@ ConcurrencyControl::ConcurrencyControl(
         std::vector<std::shared_ptr<boost::latch>> &latches,
         int threadNumber,
         int totalCCThreads,
-        int batchSize)
+        int batchSize,
+        unsigned long logSize)
         : recordsMap(recordsMap),
           logTransactions(logTransactions),
           latches(latches),
           threadNumber(threadNumber),
           totalCCThreads(totalCCThreads),
-          batchSize(batchSize) {}
+          batchSize(batchSize),
+          logSize(logSize) {}
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
     spdlog::debug("writing operation {}, timestamp {} in thread {}",
@@ -61,7 +62,13 @@ void ConcurrencyControl::writeTransaction(const Transaction &transaction) {
 }
 
 void ConcurrencyControl::readFromLogByBatchSize(int batchSize) {
-    while (logPosition + batchSize <= logTransactions.size()) {
+    while (logPosition + batchSize <= logSize) {
+        if (logPosition + batchSize > logTransactions.size()) {
+            spdlog::info("waiting for log writer to write");
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
         for (int i = 0; i < batchSize; ++i) {
             writeTransaction(*logTransactions.at(logPosition++));
         }
@@ -72,9 +79,10 @@ void ConcurrencyControl::readFromLogByBatchSize(int batchSize) {
 }
 
 void ConcurrencyControl::readFromLog() {
+    spdlog::info("Start reading log at thread {}, logTransactions.size() {}", threadNumber, logTransactions.size());
     readFromLogByBatchSize(batchSize);
     // last batch
-    unsigned long remainder = logTransactions.size() - logPosition;
+    unsigned long remainder = logSize - logPosition;
     if (remainder > 0) {
         readFromLogByBatchSize(remainder);
     }
