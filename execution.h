@@ -39,7 +39,7 @@ private:
     bool executeUpdateOperation(Operation operation, long timestamp);
     bool executeInsertOperation(Operation operation);
     bool executeModifyOperation(Operation operation, long timestamp);
-    double readValue(int key, long timestamp);
+    double readValue(long key, long timestamp);
 
 public:
     Execution(std::vector<RecordsMapPtr>& recordsMap,

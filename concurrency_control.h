@@ -25,7 +25,7 @@ private:
     long batchNumber = 0;
     unsigned long logSize;
 
-    bool isKeyInThePartition(int key) const;
+    bool isKeyInThePartition(long key) const;
     void readFromLogByBatchSize(int batchSize);
     void writeOperation(Operation operation, const Transaction &transaction);
     void writeTransaction(const Transaction &transaction);

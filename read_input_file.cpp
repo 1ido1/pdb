@@ -67,14 +67,14 @@ Operation ReadInputFile::parseLine(const std::string &line) {
 }
 
 Operation ReadInputFile::buildReadOperation(std::istringstream &stream) {
-    int key;
+    long key;
     stream >> key;
 
     return Operation(InputTypes::read, key);
 }
 
 Operation ReadInputFile::buildInsertOrUpdateOperation(InputTypes inputTypes, std::istringstream &stream) {
-    int key;
+    long key;
     stream >> key;
     double value = key;
 
@@ -82,7 +82,7 @@ Operation ReadInputFile::buildInsertOrUpdateOperation(InputTypes inputTypes, std
 }
 
 Operation ReadInputFile::buildModifyOperation(std::istringstream &stream) {
-    int key;
+    long key;
     double value;
     stream >> key;
     stream >> value;
@@ -91,7 +91,7 @@ Operation ReadInputFile::buildModifyOperation(std::istringstream &stream) {
 }
 
 Operation ReadInputFile::buildScanOperation(std::istringstream &stream) {
-    int key;
+    long key;
     int range;
     stream >> key;
     stream >> range;

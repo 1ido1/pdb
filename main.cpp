@@ -38,12 +38,11 @@ int main(int argc, char *argv[]) {
 
     tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> timestampToTransactionState =
             Utils::initTimestampToTransactionState(transactions.size());
+    std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(Constants::CC_THREADS_NUMBER);
 
     tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
     LogWriter logWriter{logTransactions};
     std::thread lwThread = std::thread(&LogWriter::writeLog, logWriter, transactions);
-
-    std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(Constants::CC_THREADS_NUMBER);
 
     std::vector<std::thread> ccThreads= Utils::startCCThreads(
             latches, logTransactions, recordsPartitionedByCct,

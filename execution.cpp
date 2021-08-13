@@ -52,7 +52,7 @@ void Execution::readFromLogByBatchSize(int batchSize) {
         }
         logPosition += batchSize;
         while (!transactionsToExecute.empty()) {
-            int timestamp = transactionsToExecute.front();
+            long timestamp = transactionsToExecute.front();
             transactionsToExecute.pop();
             if (!executeTransaction(timestamp)) {
                 transactionsToExecute.push(timestamp);
@@ -115,7 +115,7 @@ double Execution::executeReadOperation(Operation operation, long timestamp) {
     return readValue(operation.key, timestamp);
 }
 
-double Execution::readValue(int key, long timestamp) {
+double Execution::readValue(long key, long timestamp) {
     int ccThreadNumber = Utils::getCcThreadNumber(key, totalCCThreads);
     std::shared_ptr<Record> record = recordsPartitionedByCct.at(ccThreadNumber)->at(key);
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {

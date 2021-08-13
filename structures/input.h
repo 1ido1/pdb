@@ -12,16 +12,16 @@
 
 struct Operation {
     InputTypes inputType;
-    int key;
+    long key;
     double value;
     int range;
 
-    Operation(InputTypes inputType, int key, double value, int range) : inputType(inputType), key(key), value(value),
+    Operation(InputTypes inputType, long key, double value, int range) : inputType(inputType), key(key), value(value),
                                                                         range(range) {}
 
-    Operation(InputTypes inputType, int key, double value) : inputType(inputType), key(key), value(value), range(0) {}
+    Operation(InputTypes inputType, long key, double value) : inputType(inputType), key(key), value(value), range(0) {}
 
-    Operation(InputTypes inputType, int key) : inputType(inputType), key(key), value(0), range(0) {}
+    Operation(InputTypes inputType, long key) : inputType(inputType), key(key), value(0), range(0) {}
 
 
     friend std::ostream &operator<<(std::ostream &os, const Operation &operation) {

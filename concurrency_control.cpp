@@ -37,12 +37,12 @@ void ConcurrencyControl::writeOperation(Operation operation, const Transaction &
                                          prevRecord);
         (*recordsMap)[operation.key] = newRecord;
         spdlog::info("adding new record for key {}, timestamp {} in thread {}",
-                     newRecord, transaction.timestamp, threadNumber);
+                     operation.key, transaction.timestamp, threadNumber);
     } else {
         Record record(transaction.timestamp, LONG_MAX, transaction, Constants::INITIALIZED_VALUE, nullptr);
         recordsMap->emplace(operation.key, std::make_shared<Record>(record));
         spdlog::info("writing first record for key {}, timestamp {} in thread {}",
-                     record, transaction.timestamp, threadNumber);
+                     operation.key, transaction.timestamp, threadNumber);
     }
 }
 
@@ -89,6 +89,6 @@ void ConcurrencyControl::readFromLog() {
 }
 
 //TODO: check if need to change the hash function
-bool ConcurrencyControl::isKeyInThePartition(int key) const {
+bool ConcurrencyControl::isKeyInThePartition(long key) const {
     return Utils::getCcThreadNumber(key, totalCCThreads) == threadNumber;
 }

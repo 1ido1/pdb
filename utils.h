@@ -101,13 +101,13 @@ public:
 
     }
 
-    static size_t getCcThreadNumber(int key, int totalCCThreads) {
+    static size_t getCcThreadNumber(long key, int totalCCThreads) {
         return std::hash<int>{}(key) % totalCCThreads;
     }
 
     static Record getRecord(
             std::vector<RecordsMapPtr> &recordsPartitionedByCct,
-            int key, int totalCCThreads) {
+            long key, int totalCCThreads) {
         return *recordsPartitionedByCct.at(Utils::getCcThreadNumber(key, totalCCThreads))->at(key).get();
     }
 
