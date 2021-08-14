@@ -16,6 +16,29 @@ Execution::Execution(
         const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
         tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
         std::vector<std::shared_ptr<boost::latch>> &latches,
+        long logPosition,
+        int threadNumber,
+        int totalEThreads,
+        int totalCCThreads,
+        int batchSize)
+        : recordsPartitionedByCct(recordsPartitionedByCct),
+          logTransactions(logTransactions),
+          timestampToTransactionState(timestampToTransactionState),
+          latches(latches),
+          logPosition(logPosition),
+          threadNumber(threadNumber),
+          totalEThreads(totalEThreads),
+          totalCCThreads(totalCCThreads),
+          batchSize(batchSize),
+          batchNumber((logPosition + batchSize - 1) / batchSize)
+          {}
+
+Execution::Execution(
+        std::vector<RecordsMapPtr>
+        &recordsPartitionedByCct,
+        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+        tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+        std::vector<std::shared_ptr<boost::latch>> &latches,
         int threadNumber,
         int totalEThreads,
         int totalCCThreads,
@@ -28,6 +51,7 @@ Execution::Execution(
           totalEThreads(totalEThreads),
           totalCCThreads(totalCCThreads),
           batchSize(batchSize) {}
+
 
 void Execution::readFromLog() {
     readFromLogByBatchSize(batchSize);

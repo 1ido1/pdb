@@ -68,25 +68,55 @@ public:
     static std::vector<std::thread>
     startCCThreads(std::vector<std::shared_ptr<boost::latch>> &latches,
                    tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
-                   std::vector<RecordsMapPtr> &recordsPartitionedByCct, int ccThreadsNumber,
-                   int batchSize, unsigned long transactionSize) {
+                   std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+                   long logPosition,
+                   int ccThreadsNumber,
+                   int batchSize,
+                   unsigned long transactionSize) {
         std::vector<std::thread> ccThreads(ccThreadsNumber);
         for (int i = 0; i < ccThreadsNumber; i++) {
             spdlog::info("creating cc thread {}", i);
             ConcurrencyControl cc{recordsPartitionedByCct[i], logTransactions, latches,
-                                  i, ccThreadsNumber, batchSize, transactionSize};
+                                  logPosition, i, ccThreadsNumber, batchSize, transactionSize};
             ccThreads[i] = std::thread(&ConcurrencyControl::readFromLog, cc);
         }
         return ccThreads;
 
     }
 
+
     static std::vector<std::thread>
-    startEThreads(std::vector<RecordsMapPtr>
-                  &recordsPartitionedByCct,
+    startCCThreads(std::vector<std::shared_ptr<boost::latch>> &latches,
+                   tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                   std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+                   int ccThreadsNumber,
+                   int batchSize,
+                   unsigned long transactionSize) {
+        return startCCThreads(latches, logTransactions, recordsPartitionedByCct,
+                              0, ccThreadsNumber, batchSize, transactionSize);
+    }
+
+
+    static std::vector<std::thread>
+    startEThreads(std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+    tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+    tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+    std::vector<std::shared_ptr<boost::latch>> &latches,
+    int eThreadsNumber,
+    int ccThreadsNumber,
+    int batchSize) {
+        return startEThreads(recordsPartitionedByCct, logTransactions, timestampToTransactionState,
+                             latches, 0, eThreadsNumber, ccThreadsNumber, batchSize);
+
+    }
+
+
+    static std::vector<std::thread>
+    startEThreads(std::vector<RecordsMapPtr> &recordsPartitionedByCct,
                   tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                   tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
                   std::vector<std::shared_ptr<boost::latch>> &latches,
+                  long logPosition,
                   int eThreadsNumber,
                   int ccThreadsNumber,
                   int batchSize) {
@@ -94,7 +124,7 @@ public:
         for (int i = 0; i < eThreadsNumber; i++) {
             spdlog::info("creating execution thread {}", i);
             Execution execution{recordsPartitionedByCct, logTransactions, timestampToTransactionState,
-                                latches, i, eThreadsNumber, ccThreadsNumber, batchSize};
+                                latches, logPosition, i, eThreadsNumber, ccThreadsNumber, batchSize};
             eThreads[i] = std::thread(&Execution::readFromLog, execution);
         }
         return eThreads;

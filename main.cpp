@@ -18,40 +18,84 @@
 
 void setDebugLevel();
 
+void executeTransactions(const std::vector<std::shared_ptr<Transaction>> &transactions,
+                         std::vector<std::shared_ptr<boost::latch>> &latches,
+                         tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+                         std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+                         tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                         unsigned long logPosition, unsigned long transactionSize);
+
+void try1(const std::vector<std::shared_ptr<Transaction>> &loadTransactions,
+          std::vector<std::shared_ptr<boost::latch>> &latches,
+          tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+          std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+          tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions);
+
 int main(int argc, char *argv[]) {
-    std::vector<std::string> paths;
+    std::vector<std::string> loadPath;
+    std::vector<std::string> workloadPaths;
     if (argc == 1) {
         spdlog::info("No arguments passed to program");
         return 0;
     }
-    
+
     setDebugLevel();
 
-    for (int i = 1; i < argc; i++) {
-        paths.emplace_back(argv[i]);
+    loadPath.emplace_back(argv[1]);
+
+    for (int i = 2; i < argc; i++) {
+        workloadPaths.emplace_back(argv[i]);
     }
-    const std::vector<std::shared_ptr<Transaction>> &transactions = ReadInputFile::readFiles(paths, 10);
+
+    const std::vector<std::shared_ptr<Transaction>> &loadTransactions = ReadInputFile::readFiles(loadPath, 10);
+    const std::vector<std::shared_ptr<Transaction>> &workloadTransactions = ReadInputFile::readFiles(workloadPaths, 10);
 
     std::vector<std::shared_ptr<boost::latch>> latches =
             Utils::initLatches(Constants::CC_THREADS_NUMBER,
-                               transactions.size() / Constants::BATCH_SIZE + 1);
+                               (loadTransactions.size() + workloadTransactions.size()) / Constants::BATCH_SIZE + 2);
 
     tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> timestampToTransactionState =
-            Utils::initTimestampToTransactionState(transactions.size());
-    std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(Constants::CC_THREADS_NUMBER);
+            Utils::initTimestampToTransactionState(loadTransactions.size() + workloadTransactions.size());
+    std::vector<RecordsMapPtr> recordsPartitionedByCct = Utils::initRecordsPartitionedByCct(
+            Constants::CC_THREADS_NUMBER);
 
     tbb::concurrent_vector<std::shared_ptr<Transaction>> logTransactions;
+
+    executeTransactions(loadTransactions, latches, timestampToTransactionState,
+                        recordsPartitionedByCct, logTransactions, 0,
+                        loadTransactions.size());
+
+    if (argc == 2) {
+        spdlog::info("Only load workload, finished");
+        return 1;
+    }
+
+    executeTransactions(workloadTransactions, latches, timestampToTransactionState,
+                        recordsPartitionedByCct, logTransactions, loadTransactions.size(),
+                        loadTransactions.size() + workloadTransactions.size());
+
+
+    return 1;
+}
+
+void executeTransactions(const std::vector<std::shared_ptr<Transaction>> &transactions,
+                         std::vector<std::shared_ptr<boost::latch>> &latches,
+                         tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+                         std::vector<RecordsMapPtr> &recordsPartitionedByCct,
+                         tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+                         unsigned long logPosition, unsigned long transactionSize) {
     LogWriter logWriter{logTransactions};
     std::thread lwThread = std::thread(&LogWriter::writeLog, logWriter, transactions);
 
-    std::vector<std::thread> ccThreads= Utils::startCCThreads(
+    std::vector<std::thread> ccThreads = Utils::startCCThreads(
             latches, logTransactions, recordsPartitionedByCct,
-            Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE, transactions.size());
+            logPosition, Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE,
+            transactionSize);
 
     std::vector<std::thread> eThreads = Utils::startEThreads(
-            recordsPartitionedByCct, logTransactions, timestampToTransactionState,
-            latches, Constants::EXECUTION_THREADS_NUMBER, Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE
-    );
+            recordsPartitionedByCct, logTransactions, timestampToTransactionState,latches,
+            logPosition, Constants::EXECUTION_THREADS_NUMBER, Constants::CC_THREADS_NUMBER, Constants::BATCH_SIZE
+            );
 
     // wait for execution to finish
     lwThread.join();
@@ -64,11 +108,9 @@ int main(int argc, char *argv[]) {
         th.join();
     }
 
-//    Utils::printMap<>(std::cout, recordsMap);
-    spdlog::info("transactions size {}", transactions.size());
+    //    Utils::printMap<>(std::cout, recordsMap);
+    spdlog::info("transactions size {}", transactionSize);
     spdlog::info("records size {}", Utils::getRecordsSize(recordsPartitionedByCct));
-
-    return 1;
 }
 
 void setDebugLevel() {

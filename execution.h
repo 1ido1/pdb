@@ -46,10 +46,21 @@ public:
               const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
               tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
               std::vector<std::shared_ptr<boost::latch>> &latches,
+              long logPosition,
               int threadNumber,
               int totalEThreads,
               int totalCCThreads,
               int batchSize);
+
+    Execution(std::vector<RecordsMapPtr>& recordsMap,
+              const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+              tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
+              std::vector<std::shared_ptr<boost::latch>> &latches,
+              int threadNumber,
+              int totalEThreads,
+              int totalCCThreads,
+              int batchSize);
+
 
     void readFromLog();
 
