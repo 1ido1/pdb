@@ -13,6 +13,26 @@ ConcurrencyControl::ConcurrencyControl(
         RecordsMapPtr &recordsMap,
         const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
         std::vector<std::shared_ptr<boost::latch>> &latches,
+        long logPosition,
+        int threadNumber,
+        int totalCCThreads,
+        int batchSize,
+        unsigned long logSize)
+        : recordsMap(recordsMap),
+          logTransactions(logTransactions),
+          latches(latches),
+          logPosition(logPosition),
+          threadNumber(threadNumber),
+          totalCCThreads(totalCCThreads),
+          batchSize(batchSize),
+          logSize(logSize),
+          batchNumber((logPosition + batchSize - 1) / batchSize)
+          {}
+
+ConcurrencyControl::ConcurrencyControl(
+        RecordsMapPtr &recordsMap,
+        const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+        std::vector<std::shared_ptr<boost::latch>> &latches,
         int threadNumber,
         int totalCCThreads,
         int batchSize,
@@ -24,6 +44,7 @@ ConcurrencyControl::ConcurrencyControl(
           totalCCThreads(totalCCThreads),
           batchSize(batchSize),
           logSize(logSize) {}
+
 
 void ConcurrencyControl::writeOperation(Operation operation, const Transaction &transaction) {
     spdlog::debug("writing operation {}, timestamp {} in thread {}",

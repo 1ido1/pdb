@@ -18,7 +18,7 @@ private:
     RecordsMapPtr& recordsMap;
     const tbb::concurrent_vector<std::shared_ptr<Transaction>>& logTransactions;
     std::vector<std::shared_ptr<boost::latch>> &latches;
-    int logPosition = 0;
+    long logPosition = 0;
     int threadNumber;
     int totalCCThreads;
     int batchSize;
@@ -35,10 +35,21 @@ public:
             RecordsMapPtr& recordsMap,
             const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
             std::vector<std::shared_ptr<boost::latch>> &latches,
+            long logPosition,
             int threadNumber,
             int totalCCThreads,
             int batchSize,
             unsigned long logSize);
+
+    ConcurrencyControl(
+            RecordsMapPtr& recordsMap,
+            const tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
+            std::vector<std::shared_ptr<boost::latch>> &latches,
+            int threadNumber,
+            int totalCCThreads,
+            int batchSize,
+            unsigned long logSize);
+
     void readFromLog();
 
 };

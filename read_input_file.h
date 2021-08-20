@@ -16,18 +16,27 @@
 
 class ReadInputFile {
 public:
-    static std::vector<std::shared_ptr<Transaction>> readFile(const std::string& path, int transactionSize);
+    static std::vector<std::shared_ptr<Transaction>> readFile(const std::string &path, int transactionSize);
+
     static std::vector<std::shared_ptr<Transaction>> readFiles(
-            const std::vector<std::string>& paths, int transactionSize);
+            const std::vector<std::string> &paths, int transactionSize);
+
+    static std::vector<std::shared_ptr<Transaction>> readFiles(
+            const std::vector<std::string> &paths, int transactionSize, long startTimestamp);
 
 private:
-    static Operation parseLine(const std::string& line);
-    static Operation buildReadOperation(std::istringstream& stream);
-    static Operation buildInsertOrUpdateOperation(InputTypes inputTypes, std::istringstream& stream);
-    static Operation buildModifyOperation(std::istringstream& stream);
-    static Operation buildScanOperation(std::istringstream& stream);
+    static Operation parseLine(const std::string &line);
+
+    static Operation buildReadOperation(std::istringstream &stream);
+
+    static Operation buildInsertOrUpdateOperation(InputTypes inputTypes, std::istringstream &stream);
+
+    static Operation buildModifyOperation(std::istringstream &stream);
+
+    static Operation buildScanOperation(std::istringstream &stream);
+
     static std::vector<std::shared_ptr<Transaction>> readFile(
-            const std::string& path, int transactionSize, long timestamp);
+            const std::string &path, int transactionSize, long timestamp);
 
 };
 
