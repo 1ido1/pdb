@@ -100,14 +100,20 @@ Operation ReadInputFile::buildScanOperation(std::istringstream &stream) {
 }
 
 std::vector<std::shared_ptr<Transaction>> ReadInputFile::readFiles(
-        const std::vector<std::string> &paths, int transactionSize) {
+        const std::vector<std::string> &paths, int transactionSize, long startTimestamp) {
     std::vector<std::shared_ptr<Transaction>> transactions{std::vector<std::shared_ptr<Transaction>>()};
 
     for (const std::string& path: paths) {
         const std::vector<std::shared_ptr<Transaction>> &transactionsToAdd =
-                readFile(path, transactionSize, transactions.size());
+                readFile(path, transactionSize, startTimestamp + transactions.size());
         transactions.insert(transactions.end(), transactionsToAdd.begin(), transactionsToAdd.end());
     }
 
     return transactions;
+}
+
+std::vector<std::shared_ptr<Transaction>> ReadInputFile::readFiles(
+        const std::vector<std::string> &paths, int transactionSize) {
+
+    return readFiles(paths, transactionSize, 0);
 }

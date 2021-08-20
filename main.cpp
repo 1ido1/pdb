@@ -25,12 +25,6 @@ void executeTransactions(const std::vector<std::shared_ptr<Transaction>> &transa
                          tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions,
                          unsigned long logPosition, unsigned long transactionSize);
 
-void try1(const std::vector<std::shared_ptr<Transaction>> &loadTransactions,
-          std::vector<std::shared_ptr<boost::latch>> &latches,
-          tbb::concurrent_unordered_map<long, std::shared_ptr<TransactionState>> &timestampToTransactionState,
-          std::vector<RecordsMapPtr> &recordsPartitionedByCct,
-          tbb::concurrent_vector<std::shared_ptr<Transaction>> &logTransactions);
-
 int main(int argc, char *argv[]) {
     std::vector<std::string> loadPath;
     std::vector<std::string> workloadPaths;
@@ -47,8 +41,10 @@ int main(int argc, char *argv[]) {
         workloadPaths.emplace_back(argv[i]);
     }
 
-    const std::vector<std::shared_ptr<Transaction>> &loadTransactions = ReadInputFile::readFiles(loadPath, 10);
-    const std::vector<std::shared_ptr<Transaction>> &workloadTransactions = ReadInputFile::readFiles(workloadPaths, 10);
+    const std::vector<std::shared_ptr<Transaction>> &loadTransactions =
+            ReadInputFile::readFiles(loadPath, 10);
+    const std::vector<std::shared_ptr<Transaction>> &workloadTransactions =
+            ReadInputFile::readFiles(workloadPaths, 10, loadTransactions.size());
 
     std::vector<std::shared_ptr<boost::latch>> latches =
             Utils::initLatches(Constants::CC_THREADS_NUMBER,

@@ -145,9 +145,10 @@ double Execution::readValue(long key, long timestamp) {
     while (!isTimestampInRange(timestamp, record->beginTimestamp, record->endTimestamp)) {
         record = record->prev;
         if (record == nullptr) {
-            spdlog::error("could not find the correct value, key {}, timestamp {}",
-                          key, timestamp);
-            return Constants::INITIALIZED_VALUE;
+            spdlog::error("could not find the correct value, key {}, timestamp {}, record {}",
+                          key, timestamp,  *recordsPartitionedByCct.at(ccThreadNumber)->at(key));
+//            return Constants::INITIALIZED_VALUE;
+            throw key;
         }
     }
 
